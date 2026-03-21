@@ -1,0 +1,40 @@
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+from db.models import TaskStatus
+
+class TaskBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    project_id: Optional[int] = None
+    assigned_user: int
+    due_date: Optional[datetime] = None
+    status: TaskStatus = TaskStatus.TODO
+    progress: int = 0
+
+class TaskCreate(TaskBase):
+    pass
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[TaskStatus] = None
+    progress: Optional[int] = None
+    assigned_user: Optional[int] = None
+
+class TaskResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    project_id: Optional[int] = None
+    assigned_user: int
+    assigned_by: Optional[int] = None
+    due_date: Optional[datetime] = None
+    status: TaskStatus
+    progress: int
+    # Enriched fields
+    assigned_user_name: Optional[str] = None
+    assigned_by_name: Optional[str] = None
+    project_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}

@@ -1,0 +1,32 @@
+# Environments
+.env
+.env.*
+!.env.example
+venv/
+env/
+__pycache__/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+.npm/
+
+# Databases
+*.sqlite3
+*.db
+employee_monitoring.db
+focussync.db
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Uploads
+backend/uploads/

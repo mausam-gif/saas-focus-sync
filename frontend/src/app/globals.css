@@ -1,0 +1,60 @@
+@import "tailwindcss";
+@import "./frappe-gantt.css";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Gantt Chart Status Colors */
+.bar-active .bar {
+  fill: #6366f1 !important;
+}
+
+.bar-ontrack .bar {
+  fill: #10b981 !important;
+}
+
+.bar-atrisk .bar {
+  fill: #ef4444 !important;
+}
+
+.bar-completed .bar {
+  fill: #3b82f6 !important;
+}
+
+.bar-active .bar-progress {
+  fill: #4f46e5 !important;
+}
+
+.bar-ontrack .bar-progress {
+  fill: #059669 !important;
+}
+
+.bar-atrisk .bar-progress {
+  fill: #dc2626 !important;
+}
+
+.bar-completed .bar-progress {
+  fill: #1d4ed8 !important;
+}
