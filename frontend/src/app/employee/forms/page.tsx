@@ -244,7 +244,7 @@ export default function EmployeeFormsPage() {
     const completed = assignments.filter(a => a.is_submitted);
 
     return (
-        <div className="p-8 font-sans max-w-4xl mx-auto space-y-8">
+        <div className="p-4 sm:p-8 font-sans max-w-4xl mx-auto space-y-6 sm:space-y-8">
             <div>
                 <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">My Forms</h1>
                 <p className="text-sm text-gray-500 mt-1">Complete your assigned KPI evaluation forms.</p>

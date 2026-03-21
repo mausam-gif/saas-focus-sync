@@ -71,15 +71,15 @@ export default function TeamPage() {
     if (loading) return <div className="p-8"><Loader2 className="animate-spin w-8 h-8 text-indigo-600" /></div>;
 
     return (
-        <div className="p-8 font-sans max-w-7xl mx-auto space-y-8">
+        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
             <div>
                 <h1 className="text-2xl font-semibold text-blue-900 tracking-tight">Team Management</h1>
                 <p className="text-sm text-white mt-1">Manage platform access, provision managers, and invite employees.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 {/* User List */}
-                <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 overflow-hidden w-full">
                     <div className="flex items-center space-x-2 mb-6 text-gray-900">
                         <Users className="w-5 h-5" />
                         <h2 className="text-base font-semibold">Current Organization Members</h2>
@@ -123,7 +123,7 @@ export default function TeamPage() {
                 </div>
 
                 {/* Create User Form */}
-                <div className="bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-sm p-6 h-fit">
+                <div className="bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-sm p-4 sm:p-6 h-fit">
                     <div className="flex items-center space-x-2 mb-6 text-indigo-900">
                         <UserPlus className="w-5 h-5 relative -top-0.5" />
                         <h2 className="text-base font-semibold">Provision New User</h2>

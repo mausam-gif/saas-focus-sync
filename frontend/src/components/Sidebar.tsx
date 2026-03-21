@@ -15,7 +15,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 
-export const Sidebar = () => {
+interface SidebarProps {
+    setIsSidebarOpen?: (isOpen: boolean) => void;
+}
+
+export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
     const pathname = usePathname();
     const router = useRouter();
     const { user, logout } = useAuth();
@@ -86,6 +90,7 @@ export const Sidebar = () => {
                         <Link
                             key={link.name}
                             href={link.href}
+                            onClick={() => setIsSidebarOpen && setIsSidebarOpen(false)}
                             className={`flex items-center space-x-3 px-3 py-2 rounded-md transition-colors text-sm font-medium ${isActive
                                 ? 'bg-indigo-50 text-indigo-700'
                                 : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'

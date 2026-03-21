@@ -167,7 +167,7 @@ export default function AdminFormsPage() {
     if (authLoading || !user) return null;
 
     return (
-        <div className="p-8 font-sans max-w-7xl mx-auto space-y-8">
+        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">KPI Forms</h1>
@@ -189,8 +189,8 @@ export default function AdminFormsPage() {
 
             {/* ── CREATE TAB ── */}
             {tab === 'create' && (
-                <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 md:p-8 space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Form Title *</label>
                             <input required value={title} onChange={e => setTitle(e.target.value)}
@@ -238,7 +238,7 @@ export default function AdminFormsPage() {
                                     <input required value={q.question_text} onChange={e => updateQuestion(idx, 'question_text', e.target.value)}
                                         className="w-full border border-gray-300 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                                         placeholder="Enter your question..." />
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <label className="block text-xs font-medium text-gray-600 mb-1">Question Type</label>
                                             <select value={q.question_type} onChange={e => updateQuestion(idx, 'question_type', e.target.value as QuestionType)}
@@ -292,7 +292,7 @@ export default function AdminFormsPage() {
                     )}
                     {forms.map(form => (
                         <div key={form.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="p-6">
+                            <div className="p-4 sm:p-6">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <div className="flex items-center space-x-2 mb-1">
@@ -302,7 +302,7 @@ export default function AdminFormsPage() {
                                         <p className="text-sm text-gray-500">{form.description || 'No description'}</p>
                                         <p className="text-xs text-gray-400 mt-1">By {form.creator_name} • {form.questions?.length || 0} questions</p>
                                     </div>
-                                    <div className="flex space-x-2">
+                                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                         <button onClick={() => loadAssignments(form.id)}
                                             className="flex items-center space-x-1 text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">
                                             {expandedForm === form.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -323,7 +323,7 @@ export default function AdminFormsPage() {
                                 {assigningFormId === form.id && (
                                     <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
                                         <h4 className="text-sm font-medium text-gray-700">Assign to Employees</h4>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                             {employees.map(emp => (
                                                 <label key={emp.id} className={`flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition-colors ${selectedEmployees.includes(emp.id) ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-indigo-200'}`}>
                                                     <input type="checkbox" checked={selectedEmployees.includes(emp.id)}

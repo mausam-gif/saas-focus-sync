@@ -111,20 +111,20 @@ export default function ProjectsPage() {
     };
 
     if (loading) return (
-        <div className="p-8 flex items-center space-x-2 text-gray-500">
+        <div className="p-4 sm:p-8 flex items-center space-x-2 text-gray-500">
             <Loader2 className="animate-spin w-5 h-5" />
             <span className="text-sm">Loading projects...</span>
         </div>
     );
 
     return (
-        <div className="p-8 font-sans max-w-7xl mx-auto space-y-8">
+        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
             <div>
                 <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Project Management</h1>
                 <p className="text-sm text-gray-500 mt-1">Create, edit, and delete company projects.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 {/* Projects list */}
                 <div className={`${user?.role === 'ADMIN' ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-4`}>
                     <div className="flex items-center space-x-2 text-gray-900">
@@ -142,7 +142,7 @@ export default function ProjectsPage() {
                             <p className="text-xs mt-1">Use the form on the right to create your first project.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             {projects.map((p: any) => (
                                 <div key={p.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
                                     <div className="flex justify-between items-start mb-3">
@@ -199,7 +199,7 @@ export default function ProjectsPage() {
 
                 {/* Create form — Admin only */}
                 {user?.role === 'ADMIN' && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-fit">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 h-fit">
                         <div className="flex items-center space-x-2 mb-5 text-gray-900">
                             <Plus className="w-5 h-5" />
                             <h2 className="text-base font-semibold">New Project</h2>

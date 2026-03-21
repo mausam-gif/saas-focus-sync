@@ -154,13 +154,13 @@ export default function ManagerDashboard() {
     };
 
     return (
-        <div className="p-8 font-sans max-w-7xl mx-auto">
-            <div className="mb-10">
+        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
+            <div className="mb-6 sm:mb-8">
                 <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Team Overview</h1>
                 <p className="text-sm text-gray-500 mt-1">Monitor progress and unblock your team members.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 {[
                     { title: "Team Members", value: team.length.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
                     { title: "Avg Completion", value: `${Math.round(stats.completion)}%`, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
@@ -183,9 +183,9 @@ export default function ManagerDashboard() {
                 })}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
                 {/* KPI Panel - Forms-Driven Swappable */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
                     <div className="mb-4">
                         <h2 className="text-base font-semibold text-gray-900 mb-3">Team KPI Performance</h2>
                         <p className="text-xs text-gray-500 mb-3">Based on KPI form submissions.</p>
@@ -302,8 +302,8 @@ export default function ManagerDashboard() {
             </div>
 
             {/* ── Assign Task Panel ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-6 flex flex-col">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 sm:p-6 flex flex-col">
                     <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2 mb-1">
                         <ClipboardList className="w-5 h-5 text-indigo-500" />
                         <span>Assign Task</span>
@@ -344,7 +344,7 @@ export default function ManagerDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
                     <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2 mb-4">
                         <CheckCircle2 className="w-5 h-5 text-green-500" />
                         <span>Assigned Tasks</span>
@@ -401,8 +401,8 @@ export default function ManagerDashboard() {
             </div>
 
             {/* Check-in */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
                     <h2 className="text-base font-semibold text-gray-900 mb-2">Check-in with Team</h2>
                     <p className="text-xs text-gray-500 mb-4">Send messages, files, or audio notes to employees.</p>
 

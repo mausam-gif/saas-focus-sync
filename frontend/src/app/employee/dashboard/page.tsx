@@ -184,10 +184,10 @@ export default function EmployeeDashboard() {
 
     // ── Render ──────────────────────────────────────────────────────────────────
     return (
-        <div className="p-8 font-sans max-w-7xl mx-auto space-y-8">
+        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
 
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">My Workspace</h1>
                     <p className="text-sm text-gray-500 mt-1">Track your tasks, KPI performance, and project deadlines.</p>
@@ -199,7 +199,7 @@ export default function EmployeeDashboard() {
             </div>
 
             {/* ── Stats row ── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {/* KPI Score card */}
                 <div className={`bg-white rounded-2xl border shadow-sm p-5 col-span-2 md:col-span-1 ${
                     kpiColor === 'green' ? 'border-green-200' : kpiColor === 'yellow' ? 'border-yellow-200' : kpiColor === 'red' ? 'border-red-200' : 'border-gray-100'
@@ -263,7 +263,7 @@ export default function EmployeeDashboard() {
 
             {/* ── KPI Score History bar chart ── */}
             {myScores.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
                     <h2 className="text-sm font-semibold text-gray-900 flex items-center space-x-2 mb-4">
                         <TrendingUp className="w-4 h-4 text-indigo-500" />
                         <span>KPI Score History</span>
@@ -288,7 +288,7 @@ export default function EmployeeDashboard() {
             )}
 
             {/* ── Project Timeline & Gantt ── */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2">
                         <CalendarDays className="w-5 h-5 text-indigo-500" />
@@ -305,7 +305,7 @@ export default function EmployeeDashboard() {
                 {projects.length > 0 ? (
                     <>
                         {/* Deadline countdown cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
                             {projects.map((p: any) => {
                                 const dl = new Date(p.deadline);
                                 const daysLeft = Math.ceil((dl.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -360,9 +360,9 @@ export default function EmployeeDashboard() {
             </div>
 
             {/* ── Tasks + Work Submission ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                 {/* Tasks Panel */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col min-h-[420px]">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col min-h-[420px]">
                     <div className="flex items-center justify-between mb-5">
                         <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2">
                             <Briefcase className="w-5 h-5 text-indigo-500" />
@@ -422,7 +422,7 @@ export default function EmployeeDashboard() {
                 </div>
 
                 {/* Work Submission */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col min-h-[420px]">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col min-h-[420px]">
                     <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2 mb-2">
                         <UploadCloud className="w-5 h-5 text-purple-500" />
                         <span>Submit Work</span>
@@ -473,7 +473,7 @@ export default function EmployeeDashboard() {
             </div>
 
             {/* ── Messages ── */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col min-h-[500px]">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col min-h-[500px]">
                 <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-100">
                     <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2">
                         <MessageSquare className="w-5 h-5 text-indigo-500" />
