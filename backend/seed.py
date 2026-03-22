@@ -1,11 +1,47 @@
 import asyncio
+import sqlite3
+import os
 from sqlalchemy.orm import Session
 from core.security import get_password_hash
 from db.session import SessionLocal, engine
 from db.models import Base, User, Project, Task, KPIMetric
 from datetime import datetime, timedelta
 
+def migrate_schema():
+    print("Running automated schema migration...")
+    db_path = "employee_monitoring.db"
+    if not os.path.exists(db_path):
+        return
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # 1. Add columns to 'users' table
+    for col_name, col_type in [("unit", "VARCHAR"), ("phone", "VARCHAR"), ("location", "VARCHAR")]:
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+        except sqlite3.OperationalError:
+            pass
+
+    # 2. Add columns to 'projects' table
+    projects_cols = [
+        ("client_id", "INTEGER"), ("shooting_date", "DATETIME"), ("delivery_date", "DATETIME"),
+        ("service_category", "VARCHAR"), ("client_value_proposition", "TEXT"),
+        ("total_budget", "FLOAT"), ("current_spend", "FLOAT"), ("resource_allocation", "TEXT"),
+        ("problem_solved", "TEXT"), ("shooting_fee", "FLOAT"), ("editing_fee", "FLOAT"), ("the_hook", "TEXT")
+    ]
+    for col_name, col_type in projects_cols:
+        try:
+            cursor.execute(f"ALTER TABLE projects ADD COLUMN {col_name} {col_type}")
+        except sqlite3.OperationalError:
+            pass
+
+    conn.commit()
+    conn.close()
+    print("Automated schema migration complete.")
+
 def seed_db():
+    migrate_schema()
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
