@@ -11,7 +11,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "FocusSync | Employee Management",
+  title: "E5 Chronicles | Management",
   description: "Modern Employee Monitoring SaaS",
   appleWebApp: {
     capable: true,
