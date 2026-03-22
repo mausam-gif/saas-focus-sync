@@ -10,6 +10,9 @@ interface User {
     email: string;
     name: string;
     role: UserRole;
+    unit?: string;
+    phone?: string;
+    location?: string;
     manager_id: number | null;
 }
 

@@ -257,7 +257,7 @@ export default function EmployeeDashboard() {
                         <MessageSquare className="w-4 h-4 text-purple-500" />
                     </div>
                     <p className="text-4xl font-black text-gray-900">{unreadMessages}</p>
-                    <p className="text-xs text-gray-400 mt-1">from manager / admin</p>
+                    <p className="text-xs text-gray-400 mt-1">from Creative Manager / Elite</p>
                 </div>
             </div>
 
@@ -477,7 +477,7 @@ export default function EmployeeDashboard() {
                 <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-100">
                     <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2">
                         <MessageSquare className="w-5 h-5 text-indigo-500" />
-                        <span>Messages from Manager / Admin</span>
+                        <span>Messages from Creative Manager / Elite</span>
                     </h2>
                     {unreadMessages > 0 && (
                         <span className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full font-medium">
@@ -489,8 +489,8 @@ export default function EmployeeDashboard() {
                 <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
                     {questions.length > 0 ? questions.map((q: any) => {
                         const isFromAdmin = q.creator?.role?.toUpperCase() === 'ADMIN';
-                        const senderName = q.creator?.name || (isFromAdmin ? 'Admin' : 'Manager');
-                        const roleLabel = q.creator?.role || 'MANAGER';
+                        const senderName = q.creator?.name || (isFromAdmin ? 'Elite' : 'Creative Manager');
+                        const roleLabel = q.creator?.role === 'ADMIN' ? 'Elite' : q.creator?.role === 'MANAGER' ? 'Creative Manager' : (q.creator?.role || 'Creative Manager');
                         const hasReplied = q.responses && q.responses.length > 0;
                         const replyFile = replyFiles[q.id];
 
@@ -576,7 +576,7 @@ export default function EmployeeDashboard() {
                         <div className="flex flex-col items-center justify-center h-full py-16 text-center">
                             <MessageSquare className="w-12 h-12 text-gray-200 mb-3" />
                             <p className="text-base font-medium text-gray-900">No Messages Yet</p>
-                            <p className="text-sm text-gray-500 mt-1">Messages from your manager or admin will appear here.</p>
+                            <p className="text-sm text-gray-500 mt-1">Messages from your Creative Manager or Elite will appear here.</p>
                         </div>
                     )}
                 </div>

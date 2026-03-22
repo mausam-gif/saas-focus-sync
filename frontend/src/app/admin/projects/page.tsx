@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { FolderKanban, Plus, Clock, Loader2, Target, Pencil, Trash2, X, Check, AlertTriangle } from 'lucide-react';
+import { FolderKanban, Plus, Clock, Loader2, Target, Pencil, Trash2, X, Check, AlertTriangle, Users } from 'lucide-react';
 
 const STATUS_STYLES: Record<string, string> = {
     'ACTIVE':    'bg-indigo-100 text-indigo-800 border-indigo-300',
@@ -16,6 +16,7 @@ export default function ProjectsPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [projects, setProjects] = useState<any[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
@@ -23,13 +24,26 @@ export default function ProjectsPage() {
     // Create form state
     const [formData, setFormData] = useState({
         name: '',
+        client_id: '',
         start_date: new Date().toISOString().split('T')[0],
+        shooting_date: '',
+        delivery_date: '',
         deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        service_category: '',
+        client_value_proposition: '',
+        total_budget: '',
+        resource_allocation: ''
     });
 
     // Edit modal state
     const [editProject, setEditProject] = useState<any | null>(null);
-    const [editForm, setEditForm] = useState({ name: '', start_date: '', deadline: '', status: '' });
+    const [editForm, setEditForm] = useState<any>({ 
+        name: '', start_date: '', deadline: '', status: '', 
+        client_id: '', shooting_date: '', delivery_date: '',
+        service_category: '', client_value_proposition: '', 
+        total_budget: '', current_spend: '', resource_allocation: '',
+        problem_solved: '', shooting_fee: '', editing_fee: '', the_hook: ''
+    });
     const [isSavingEdit, setIsSavingEdit] = useState(false);
 
     // Delete confirm state
@@ -44,8 +58,12 @@ export default function ProjectsPage() {
 
     const fetchProjects = async () => {
         try {
-            const res = await api.get('/projects/');
-            setProjects(res.data);
+            const [projRes, clientRes] = await Promise.all([
+                api.get('/projects/'),
+                api.get('/clients/')
+            ]);
+            setProjects(projRes.data);
+            setClients(clientRes.data);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
@@ -54,11 +72,24 @@ export default function ProjectsPage() {
         e.preventDefault();
         setIsCreating(true);
         try {
-            await api.post('/projects/', formData);
+            const { client_id, ...rest } = formData;
+            const payload = {
+                ...rest,
+                ...(client_id ? { client_id: parseInt(client_id as any) } : {})
+            };
+            
+            await api.post('/projects/', payload);
             setFormData({
                 name: '',
+                client_id: '',
                 start_date: new Date().toISOString().split('T')[0],
+                shooting_date: '',
+                delivery_date: '',
                 deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                service_category: '',
+                client_value_proposition: '',
+                total_budget: '',
+                resource_allocation: ''
             });
             fetchProjects();
         } catch (err: any) {
@@ -79,10 +110,22 @@ export default function ProjectsPage() {
     const openEdit = (p: any) => {
         setEditProject(p);
         setEditForm({
-            name: p.name,
+            name: p.name || '',
             start_date: p.start_date?.split('T')[0] || '',
             deadline: p.deadline?.split('T')[0] || '',
             status: p.status || 'ACTIVE',
+            client_id: p.client_id || '',
+            shooting_date: p.shooting_date?.split('T')[0] || '',
+            delivery_date: p.delivery_date?.split('T')[0] || '',
+            service_category: p.service_category || '',
+            client_value_proposition: p.client_value_proposition || '',
+            total_budget: p.total_budget || '',
+            current_spend: p.current_spend || '',
+            resource_allocation: p.resource_allocation || '',
+            problem_solved: p.problem_solved || '',
+            shooting_fee: p.shooting_fee || '',
+            editing_fee: p.editing_fee || '',
+            the_hook: p.the_hook || '',
         });
     };
 
@@ -90,7 +133,13 @@ export default function ProjectsPage() {
         if (!editProject) return;
         setIsSavingEdit(true);
         try {
-            await api.put(`/projects/${editProject.id}`, editForm);
+            const { client_id, ...rest } = editForm;
+            const payload = {
+                ...rest,
+                client_id: client_id ? parseInt(client_id) : null
+            };
+            
+            await api.put(`/projects/${editProject.id}`, payload);
             setEditProject(null);
             fetchProjects();
         } catch (err: any) {
@@ -162,7 +211,7 @@ export default function ProjectsPage() {
                                                     </button>
                                                 </>
                                             )}
-                                            {(user?.role === 'ADMIN' || user?.role === 'MANAGER') ? (
+                                             {(user?.role === 'ADMIN' || user?.role === 'MANAGER') ? (
                                                 <select
                                                     value={p.status || 'ACTIVE'}
                                                     disabled={statusUpdating === p.id}
@@ -181,7 +230,20 @@ export default function ProjectsPage() {
                                             )}
                                         </div>
                                     </div>
+
+                                    {p.service_category && (
+                                        <div className="mb-3 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded uppercase w-fit">
+                                            {p.service_category}
+                                        </div>
+                                    )}
+
                                     <div className="space-y-1.5">
+                                        {p.client?.business_name && (
+                                            <div className="flex items-center text-sm text-gray-700 font-medium">
+                                                <Users className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-gray-400" />
+                                                <span>{p.client.business_name}</span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center text-sm text-gray-500">
                                             <Clock className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
                                             <span>Starts: {new Date(p.start_date).toLocaleDateString()}</span>
@@ -211,21 +273,41 @@ export default function ProjectsPage() {
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     type="text"
                                     className="w-full border border-gray-200 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none placeholder-gray-400"
-                                    placeholder="E.g., Q3 Mobile App Launch" />
+                                    placeholder="E.g., Cinematic Car Shoot" />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
-                                <input required value={formData.start_date}
-                                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                                    type="date"
-                                    className="w-full border border-gray-200 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Link Client</label>
+                                <select 
+                                    value={formData.client_id}
+                                    onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+                                    className="w-full border border-gray-200 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                >
+                                    <option value="">No Client (Internal)</option>
+                                    {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                                    <input required value={formData.start_date}
+                                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                                        type="date"
+                                        className="w-full border border-gray-200 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Deadline</label>
+                                    <input required value={formData.deadline}
+                                        onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                                        type="date"
+                                        className="w-full border border-gray-200 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Deadline</label>
-                                <input required value={formData.deadline}
-                                    onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                                    type="date"
-                                    className="w-full border border-gray-200 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Service Category</label>
+                                <input value={formData.service_category}
+                                    onChange={(e) => setFormData({ ...formData, service_category: e.target.value })}
+                                    className="w-full border border-gray-200 bg-white text-gray-900 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    placeholder="Wedding Reel, Commercial, etc." />
                             </div>
                             <button type="submit" disabled={isCreating}
                                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors shadow-md disabled:bg-indigo-300 disabled:cursor-not-allowed mt-2">
@@ -239,7 +321,7 @@ export default function ProjectsPage() {
             {/* ── Edit Modal ── */}
             {editProject && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 animate-fade-in">
                         <div className="flex items-center justify-between mb-5">
                             <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2">
                                 <Pencil className="w-4 h-4 text-indigo-500" />
@@ -249,39 +331,142 @@ export default function ProjectsPage() {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Project Name</label>
-                                <input value={editForm.name}
-                                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                                    className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                                <select value={editForm.status}
-                                    onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                                    className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                                    <option value="ACTIVE">ACTIVE</option>
-                                    <option value="ON TRACK">ON TRACK</option>
-                                    <option value="AT RISK">AT RISK</option>
-                                    <option value="COMPLETED">COMPLETED</option>
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                            {/* Basic Info */}
+                            <div className="space-y-3 p-4 bg-gray-50 rounded-xl">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Foundational Basic Info</h3>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
-                                    <input type="date" value={editForm.start_date}
-                                        onChange={e => setEditForm({ ...editForm, start_date: e.target.value })}
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Project Name</label>
+                                    <input value={editForm.name}
+                                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                                         className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                 </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                                        <select value={editForm.status}
+                                            onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                            <option value="ACTIVE">ACTIVE</option>
+                                            <option value="ON TRACK">ON TRACK</option>
+                                            <option value="AT RISK">AT RISK</option>
+                                            <option value="COMPLETED">COMPLETED</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Service Category</label>
+                                        <input value={editForm.service_category}
+                                            onChange={e => setEditForm({ ...editForm, service_category: e.target.value })}
+                                            placeholder="e.g. Cinematic Car Shoot"
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">Deadline</label>
-                                    <input type="date" value={editForm.deadline}
-                                        onChange={e => setEditForm({ ...editForm, deadline: e.target.value })}
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Client</label>
+                                    <select value={editForm.client_id}
+                                        onChange={e => setEditForm({ ...editForm, client_id: e.target.value })}
+                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        <option value="">No Client (Internal)</option>
+                                        {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                                        <input type="date" value={editForm.start_date}
+                                            onChange={e => setEditForm({ ...editForm, start_date: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Deadline</label>
+                                        <input type="date" value={editForm.deadline}
+                                            onChange={e => setEditForm({ ...editForm, deadline: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Ongoing / During */}
+                            <div className="space-y-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                                <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider text-gray-900">Ongoing Project Details</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Shooting Date</label>
+                                        <input type="date" value={editForm.shooting_date}
+                                            onChange={e => setEditForm({ ...editForm, shooting_date: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Final Delivery Date</label>
+                                        <input type="date" value={editForm.delivery_date}
+                                            onChange={e => setEditForm({ ...editForm, delivery_date: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Client Value Proposition</label>
+                                    <input value={editForm.client_value_proposition}
+                                        onChange={e => setEditForm({ ...editForm, client_value_proposition: e.target.value })}
+                                        placeholder="What do they care about most?"
+                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Total Budget (NPR)</label>
+                                        <input type="number" value={editForm.total_budget}
+                                            onChange={e => setEditForm({ ...editForm, total_budget: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Current Spend</label>
+                                        <input type="number" value={editForm.current_spend}
+                                            onChange={e => setEditForm({ ...editForm, current_spend: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Resource Allocation (On-site)</label>
+                                    <input value={editForm.resource_allocation}
+                                        onChange={e => setEditForm({ ...editForm, resource_allocation: e.target.value })}
+                                        placeholder="e.g. Director, Assistant"
                                         className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                 </div>
                             </div>
-                            <div className="flex space-x-3 pt-2">
+
+                            {/* Post Completion */}
+                            <div className="space-y-3 p-4 bg-green-50/50 rounded-xl border border-green-100">
+                                <h3 className="text-xs font-bold text-green-600 uppercase tracking-wider text-gray-900">Post-Completion Intelligence</h3>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">The Problem / Pain Point</label>
+                                    <input value={editForm.problem_solved}
+                                        onChange={e => setEditForm({ ...editForm, problem_solved: e.target.value })}
+                                        placeholder="Why did they hire us?"
+                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Shooting Fee</label>
+                                        <input type="number" value={editForm.shooting_fee}
+                                            onChange={e => setEditForm({ ...editForm, shooting_fee: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Editing Fee</label>
+                                        <input type="number" value={editForm.editing_fee}
+                                            onChange={e => setEditForm({ ...editForm, editing_fee: e.target.value })}
+                                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">The "Hook" / Preferred Style</label>
+                                    <input value={editForm.the_hook}
+                                        onChange={e => setEditForm({ ...editForm, the_hook: e.target.value })}
+                                        placeholder="What style did they like?"
+                                        className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex space-x-3 pt-2">
                                 <button onClick={() => setEditProject(null)}
                                     className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 text-sm font-medium">
                                     Cancel
@@ -292,7 +477,6 @@ export default function ProjectsPage() {
                                     <span>{isSavingEdit ? 'Saving...' : 'Save Changes'}</span>
                                 </button>
                             </div>
-                        </div>
                     </div>
                 </div>
             )}

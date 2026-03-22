@@ -47,6 +47,7 @@ export default function ManagerDashboard() {
 
         if (user && !authLoading) {
             api.get('/users/').then(res => setTeam(res.data.filter((u: any) => u.id !== user.id && u.role.toUpperCase() === 'EMPLOYEE')));
+            const roleMap: Record<string, string> = { 'ADMIN': 'Elite', 'MANAGER': 'Creative Manager', 'EMPLOYEE': 'Elite Member' };
             api.get('/analytics/').then(res => {
                 const kpis = res.data;
                 if (kpis.length > 0) {
@@ -195,7 +196,7 @@ export default function ManagerDashboard() {
                                 <button key={key} onClick={() => { setKpiView(key as 'team' | 'employee'); setKpiSelectedId(null); }}
                                     className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-md text-xs font-medium transition-all ${kpiView === key ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                         }`}>
-                                    <Icon className="w-3 h-3" /><span>{label}</span>
+                                    <Icon className="w-3 h-3" /><span>{key === 'employee' ? 'Elite Member' : label}</span>
                                 </button>
                             ))}
                         </div>
@@ -264,7 +265,7 @@ export default function ManagerDashboard() {
                         <div className="space-y-3">
                             <select value={kpiSelectedId ?? ''} onChange={e => setKpiSelectedId(parseInt(e.target.value) || null)}
                                 className="w-full border border-gray-300 bg-white text-gray-900 rounded-lg p-2 text-sm outline-none">
-                                <option value="">Select an Employee...</option>
+                                <option value="">Select an Elite Member...</option>
                                 {team.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                             </select>
                             {kpiSelectedId && (() => {
@@ -308,11 +309,11 @@ export default function ManagerDashboard() {
                         <ClipboardList className="w-5 h-5 text-indigo-500" />
                         <span>Assign Task</span>
                     </h2>
-                    <p className="text-xs text-gray-500 mb-4">Send a task directly to an employee.</p>
+                    <p className="text-xs text-gray-500 mb-4">Send a task directly to an Elite Member.</p>
                     <div className="flex-1 flex flex-col space-y-3">
                         <select value={taskAssignTo} onChange={e => setTaskAssignTo(e.target.value)}
                             className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <option value="" disabled>Assign to employee...</option>
+                            <option value="" disabled>Assign to Elite Member...</option>
                             {team.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
                         </select>
                         <input type="text" value={taskTitle} onChange={e => setTaskTitle(e.target.value)}
@@ -404,12 +405,12 @@ export default function ManagerDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
                     <h2 className="text-base font-semibold text-gray-900 mb-2">Check-in with Team</h2>
-                    <p className="text-xs text-gray-500 mb-4">Send messages, files, or audio notes to employees.</p>
+                    <p className="text-xs text-gray-500 mb-4">Send messages, files, or audio notes to Elite Members.</p>
 
                     <div className="flex-1 flex flex-col space-y-4">
                         {/* Employee select */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Employee</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Elite Member</label>
                             <select
                                 value={selectedEmployee}
                                 onChange={(e) => setSelectedEmployee(e.target.value)}
@@ -530,7 +531,7 @@ export default function ManagerDashboard() {
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex flex-col">
                                     <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Q: {q.question_text || '[Attachment]'}</span>
-                                    <span className="text-[10px] text-gray-500 mt-0.5">Asked by: <span className="font-semibold text-indigo-700">{q.creator?.name || 'Unknown'}</span> ({q.creator?.role || 'SYSTEM'})</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">Asked by: <span className="font-semibold text-indigo-700">{q.creator?.name || 'Unknown'}</span> ({ (q.creator?.role === 'ADMIN' ? 'Elite' : q.creator?.role === 'MANAGER' ? 'Creative Manager' : q.creator?.role) || 'SYSTEM'})</span>
                                 </div>
                                 <span className="text-[10px] text-gray-400">{new Date().toLocaleDateString()}</span>
                             </div>
@@ -556,7 +557,7 @@ export default function ManagerDashboard() {
                                                 {r.employee_name ? r.employee_name.charAt(0) : 'E'}
                                             </span>
                                         </div>
-                                        <span className="text-xs font-semibold text-gray-700">{r.employee_name || 'Employee'}</span>
+                                        <span className="text-xs font-semibold text-gray-700">{r.employee_name || 'Elite Member'}</span>
                                     </div>
                                     <p className="text-sm text-gray-800 pl-7">{r.response_text}</p>
                                 </div>

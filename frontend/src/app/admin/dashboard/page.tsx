@@ -238,7 +238,7 @@ export default function AdminDashboard() {
                                 <button key={key} onClick={() => { setKpiView(key); setKpiSelectedId(null); }}
                                     className={`flex-1 flex items-center justify-center space-x-1 py-1.5 rounded-md text-xs font-medium transition-all ${kpiView === key ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                         }`}>
-                                    <Icon className="w-3 h-3" /><span>{label}</span>
+                                    <Icon className="w-3 h-3" /><span>{key === 'manager' ? 'By Creative Manager' : key === 'employee' ? 'Elite Member' : label}</span>
                                 </button>
                             ))}
                         </div>
@@ -259,7 +259,7 @@ export default function AdminDashboard() {
                                         <p className="text-xs text-gray-500 mt-0.5">Company Average KPI Score</p>
                                         <p className="text-xs text-gray-400">{kpiAnalytics.completion_rate}% completion rate</p>
                                     </div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">All Employees</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">All Elite Members</p>
                                     <div className="space-y-2 overflow-y-auto max-h-48 pr-1">
                                         {kpiAnalytics.all_employees?.map((emp: any) => (
                                             <div key={emp.employee_id} className="flex items-center space-x-2">
@@ -287,7 +287,7 @@ export default function AdminDashboard() {
                         <div className="flex-1 space-y-3">
                             <select value={kpiSelectedId ?? ''} onChange={e => setKpiSelectedId(parseInt(e.target.value) || null)}
                                 className="w-full border border-gray-300 bg-white text-gray-900 rounded-lg p-2 text-sm outline-none">
-                                <option value="">Select a Manager...</option>
+                                <option value="">Select a Creative Manager...</option>
                                 {managers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                             </select>
                             {kpiSelectedId && (() => {
@@ -302,7 +302,7 @@ export default function AdminDashboard() {
                                     <>
                                         <div className="text-center p-3 bg-blue-50 rounded-xl">
                                             <p className="text-xl font-black text-blue-600">{avgScore}</p>
-                                            <p className="text-xs text-gray-500">{mgr?.name}'s Team Avg</p>
+                                            <p className="text-xs text-gray-500">{mgr?.name}'s Team (Creative Manager) Avg</p>
                                             <p className="text-xs text-gray-400">{mgrTeam.length} member(s)</p>
                                         </div>
                                         <div className="space-y-2">
@@ -319,7 +319,7 @@ export default function AdminDashboard() {
                                                     </div>
                                                 );
                                             })}
-                                            {mgrTeam.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No employees under this manager.</p>}
+                                            {mgrTeam.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No Elite Members under this Creative Manager.</p>}
                                         </div>
                                     </>
                                 );
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
                         <div className="flex-1 space-y-3">
                             <select value={kpiSelectedId ?? ''} onChange={e => setKpiSelectedId(parseInt(e.target.value) || null)}
                                 className="w-full border border-gray-300 bg-white text-gray-900 rounded-lg p-2 text-sm outline-none">
-                                <option value="">Select an Employee...</option>
+                                <option value="">Select an Elite Member...</option>
                                 {team.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                             </select>
                             {kpiSelectedId && (() => {
@@ -344,7 +344,7 @@ export default function AdminDashboard() {
                                             <p className={`text-3xl font-black ${score ? (score.average_score >= 75 ? 'text-green-600' : score.average_score >= 50 ? 'text-yellow-600' : 'text-red-600') : 'text-gray-400'}`}>
                                                 {score ? score.average_score : '—'}
                                             </p>
-                                            <p className="text-xs text-gray-500">{emp?.name}'s KPI Score</p>
+                                            <p className="text-xs text-gray-500">{emp?.name}'s KPI Score (Elite Member)</p>
                                             {score && <p className="text-xs text-gray-400">{score.submissions_count} form(s) submitted</p>}
                                         </div>
                                         {score && (
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
                                                     style={{ width: `${score.average_score}%` }} />
                                             </div>
                                         )}
-                                        {!score && <p className="text-xs text-gray-400 text-center">No form submissions yet for this employee.</p>}
+                                        {!score && <p className="text-xs text-gray-400 text-center">No form submissions yet for this Elite Member.</p>}
                                     </div>
                                 );
                             })()}
@@ -370,19 +370,19 @@ export default function AdminDashboard() {
                         <ClipboardList className="w-5 h-5 text-indigo-500" />
                         <span>Assign Task</span>
                     </h2>
-                    <p className="text-xs text-gray-500 mb-4">Send a task to any manager or employee.</p>
+                    <p className="text-xs text-gray-500 mb-4">Send a task to any Creative Manager or Elite Member.</p>
                     <div className="flex-1 flex flex-col space-y-3">
                         <select value={taskAssignTo} onChange={e => setTaskAssignTo(e.target.value)}
                             className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                             <option value="" disabled>Assign to...</option>
-                            <optgroup label="Managers">
+                            <optgroup label="Creative Managers">
                                 {allUsers.filter((u: any) => u.role?.toUpperCase() === 'MANAGER').map((u: any) => (
-                                    <option key={u.id} value={u.id}>{u.name} (Manager)</option>
+                                    <option key={u.id} value={u.id}>{u.name} (Creative Manager)</option>
                                 ))}
                             </optgroup>
-                            <optgroup label="Employees">
+                            <optgroup label="Elite Members">
                                 {allUsers.filter((u: any) => u.role?.toUpperCase() === 'EMPLOYEE').map((u: any) => (
-                                    <option key={u.id} value={u.id}>{u.name} (Employee)</option>
+                                    <option key={u.id} value={u.id}>{u.name} (Elite Member)</option>
                                 ))}
                             </optgroup>
                         </select>
@@ -489,12 +489,12 @@ export default function AdminDashboard() {
 
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
                     <h2 className="text-base font-semibold text-gray-900 mb-2">Check-in with Team</h2>
-                    <p className="text-xs text-gray-500 mb-4">Send messages, files, or audio notes to employees.</p>
+                    <p className="text-xs text-gray-500 mb-4">Send messages, files, or audio notes to Elite Members.</p>
 
                     <div className="flex-1 flex flex-col space-y-4">
-                        {/* Employee select */}
+                        {/* Elite Member select */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Employee</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Elite Member</label>
                             <select
                                 value={selectedEmployee}
                                 onChange={(e) => setSelectedEmployee(e.target.value)}
@@ -513,7 +513,7 @@ export default function AdminDashboard() {
                                 <label className="block text-sm font-medium text-gray-700">Message (optional)</label>
                                 <button
                                     onClick={async () => {
-                                        if (!selectedEmployee) return alert("Please select an employee first.");
+                                        if (!selectedEmployee) return alert("Please select an Elite Member first.");
                                         setIsGenerating(true);
                                         try {
                                             const res = await api.post(`/questions/generate/${selectedEmployee}`);
@@ -611,7 +611,7 @@ export default function AdminDashboard() {
                         {/* Send button */}
                         <button
                             onClick={async () => {
-                                if (!selectedEmployee) return alert("Please select an employee.");
+                                if (!selectedEmployee) return alert("Please select an Elite Member.");
                                 if (!questionText && !attachment) return alert("Please write a message or attach a file.");
                                 setIsSending(true);
                                 try {
@@ -666,7 +666,7 @@ export default function AdminDashboard() {
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex flex-col">
                                         <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Q: {q.question_text || '[Attachment]'}</span>
-                                        <span className="text-[10px] text-gray-500 mt-0.5">Asked by: <span className="font-semibold text-indigo-700">{q.creator?.name || 'Unknown'}</span> ({q.creator?.role || 'SYSTEM'})</span>
+                                        <span className="text-[10px] text-gray-500 mt-0.5">Asked by: <span className="font-semibold text-indigo-700">{q.creator?.name || 'Unknown'}</span> ({(q.creator?.role === 'ADMIN' ? 'Elite' : q.creator?.role === 'MANAGER' ? 'Creative Manager' : q.creator?.role) || 'SYSTEM'})</span>
                                     </div>
                                     <span className="text-[10px] text-gray-400 font-medium">Emp ID: {q.target_employee}</span>
                                 </div>
@@ -692,7 +692,7 @@ export default function AdminDashboard() {
                                                     {r.employee_name ? r.employee_name.charAt(0) : 'E'}
                                                 </span>
                                             </div>
-                                            <span className="text-xs font-semibold text-gray-700">{r.employee_name || 'Employee'}</span>
+                                            <span className="text-xs font-semibold text-gray-700">{r.employee_name || 'Elite Member'}</span>
                                         </div>
                                         <p className="text-sm text-gray-800 pl-7">{r.response_text}</p>
                                     </div>

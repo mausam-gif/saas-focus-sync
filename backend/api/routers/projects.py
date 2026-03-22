@@ -17,11 +17,7 @@ def create_project(
     """
     Create new project. Only Admin can create projects.
     """
-    project = Project(
-        name=project_in.name,
-        start_date=project_in.start_date,
-        deadline=project_in.deadline
-    )
+    project = Project(**project_in.model_dump())
     db.add(project)
     db.commit()
     db.refresh(project)
@@ -57,12 +53,17 @@ def update_project(
     
     update_data = project_in.model_dump(exclude_unset=True)
     
-    # Restrict Managers strictly to updating the 'status' field
+    # Restrict Managers to status and project metadata/specs
     if current_user.role == UserRole.MANAGER:
-        allowed_keys = ["status"]
+        allowed_keys = [
+            "status", "shooting_date", "delivery_date", "service_category",
+            "client_value_proposition", "total_budget", "current_spend", 
+            "resource_allocation", "problem_solved", "shooting_fee", 
+            "editing_fee", "the_hook"
+        ]
         update_data = {k: v for k, v in update_data.items() if k in allowed_keys}
         if not update_data:
-            raise HTTPException(status_code=400, detail="Managers can only update the project status.")
+            raise HTTPException(status_code=400, detail="Managers can only update project metadata and status.")
 
     for field, value in update_data.items():
         setattr(project, field, value)

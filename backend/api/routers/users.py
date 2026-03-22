@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from api import deps
 from db.models import User, UserRole
-from schemas.user import UserCreate, UserUpdate, UserResponse
-from core.security import get_password_hash
+from schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChange
+from core.security import get_password_hash, verify_password
 
 router = APIRouter()
 
@@ -38,6 +38,9 @@ def create_user(
         hashed_password=get_password_hash(user_in.password),
         name=user_in.name,
         role=user_in.role,
+        unit=user_in.unit,
+        phone=user_in.phone,
+        location=user_in.location,
         manager_id=manager_id
     )
     db.add(user)
@@ -140,3 +143,65 @@ def read_user_me(
     Get current user.
     """
     return current_user
+
+@router.put("/me/password")
+def change_password(
+    *,
+    db: Session = Depends(deps.get_db),
+    password_in: PasswordChange,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Change own password.
+    """
+    if not verify_password(password_in.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    current_user.hashed_password = get_password_hash(password_in.new_password)
+    db.add(current_user)
+    db.commit()
+    return {"message": "Password updated successfully"}
+
+@router.put("/{user_id}/profile", response_model=UserResponse)
+def update_user_profile(
+    *,
+    db: Session = Depends(deps.get_db),
+    user_id: int,
+    user_in: UserUpdate,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Update own profile or employee profile if manager/admin.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Permission check: own profile OR (manager/admin and allowed to edit this user)
+    if current_user.id != user_id:
+        if current_user.role == UserRole.ADMIN:
+            pass # Admin can edit anyone
+        elif current_user.role == UserRole.MANAGER and user.role == UserRole.EMPLOYEE:
+            pass # Manager can edit employees (though usually theirs, the system is quite open)
+        else:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    update_data = user_in.model_dump(exclude_unset=True)
+    # Don't allow password change here (use /me/password)
+    # Don't allow role/manager_id change unless admin
+    if current_user.role != UserRole.ADMIN:
+        update_data.pop("role", None)
+        update_data.pop("manager_id", None)
+        update_data.pop("password", None)
+
+    if "password" in update_data and current_user.role == UserRole.ADMIN:
+        update_data["hashed_password"] = get_password_hash(update_data["password"])
+        del update_data["password"]
+    
+    for field, value in update_data.items():
+        setattr(user, field, value)
+        
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { Users, UserPlus, ShieldAlert, Loader2, Trash2 } from 'lucide-react';
+import { Users, UserPlus, ShieldAlert, Loader2, Trash2, Pencil } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 
@@ -11,7 +11,17 @@ export default function TeamPage() {
     const router = useRouter();
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'EMPLOYEE' });
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingUserId, setEditingUserId] = useState<number | null>(null);
+    const [formData, setFormData] = useState({ 
+        name: '', 
+        email: '', 
+        password: '', 
+        role: 'EMPLOYEE',
+        unit: '',
+        phone: '',
+        location: ''
+    });
     const [submitStatus, setSubmitStatus] = useState({ loading: false, error: '', success: '' });
 
     useEffect(() => {
@@ -47,6 +57,31 @@ export default function TeamPage() {
         }
     };
 
+    const resetForm = () => {
+        setIsEditMode(false);
+        setEditingUserId(null);
+        setFormData({ 
+            name: '', email: '', password: '', role: 'EMPLOYEE',
+            unit: '', phone: '', location: ''
+        });
+        setSubmitStatus({ loading: false, error: '', success: '' });
+    };
+
+    const openEditForm = (u: any) => {
+        setIsEditMode(true);
+        setEditingUserId(u.id);
+        setFormData({
+            name: u.name || '',
+            email: u.email || '',
+            password: '', // Leave empty unless changing
+            role: u.role || 'EMPLOYEE',
+            unit: u.unit || '',
+            phone: u.phone || '',
+            location: u.location || ''
+        });
+        setSubmitStatus({ loading: false, error: '', success: '' });
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -57,12 +92,36 @@ export default function TeamPage() {
         try {
             await api.post('/users/', formData);
             setSubmitStatus({ loading: false, error: '', success: 'User created successfully!' });
-            setFormData({ name: '', email: '', password: '', role: 'EMPLOYEE' });
+            resetForm();
             fetchUsers();
         } catch (err: any) {
             setSubmitStatus({
                 loading: false,
-                error: err.response?.data?.detail || 'Failed to create user',
+                error: (err.response?.data?.detail || 'Failed to create user'),
+                success: ''
+            });
+        }
+    };
+
+    const handleUpdateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingUserId) return;
+        setSubmitStatus({ loading: true, error: '', success: '' });
+        try {
+            const { password, ...updateData } = formData;
+            const data: any = { ...updateData };
+            if (password) data.password = password;
+
+            // Simple handling: admin can update any, manager can update employees
+            // On backend we have PUT /users/{id} for admin
+            await api.put(`/users/${editingUserId}`, data);
+            setSubmitStatus({ loading: false, error: '', success: 'User updated successfully!' });
+            fetchUsers();
+            setTimeout(() => resetForm(), 1000);
+        } catch (err: any) {
+            setSubmitStatus({
+                loading: false,
+                error: (err.response?.data?.detail || 'Failed to update user'),
                 success: ''
             });
         }
@@ -92,6 +151,9 @@ export default function TeamPage() {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WhatsApp</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
@@ -100,15 +162,27 @@ export default function TeamPage() {
                                     <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.name}</td>
                                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
-                                        <td className="px-4 py-4 whitespace-nowrap text-sm">
+                                         <td className="px-4 py-4 whitespace-nowrap text-sm">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                                                 ${u.role === 'ADMIN' ? 'bg-indigo-100 text-indigo-800' :
                                                     u.role === 'MANAGER' ? 'bg-purple-100 text-purple-800' :
                                                         'bg-green-100 text-green-800'}`}>
-                                                {u.role}
+                                                {u.role === 'ADMIN' ? 'Elite' : u.role === 'MANAGER' ? 'Creative Manager' : 'Elite Member'}
                                             </span>
                                         </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {u.unit ? (
+                                                <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                                    {u.unit.replace(/_/g, ' ')}
+                                                </span>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.phone || '-'}</td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.location || '-'}</td>
                                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                            <button onClick={() => openEditForm(u)} className="text-indigo-600 hover:text-indigo-900 font-medium transition-colors mr-3" title="Edit User">
+                                                <Pencil className="w-4 h-4 inline" />
+                                            </button>
                                             {user?.role === 'ADMIN' && u.email !== user?.email && (
                                                 <button onClick={() => handleDeleteUser(u.id)} className="text-red-600 hover:text-red-900 font-medium transition-colors" title="Delete User">
                                                     <Trash2 className="w-4 h-4 inline" />
@@ -124,12 +198,19 @@ export default function TeamPage() {
 
                 {/* Create User Form */}
                 <div className="bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-sm p-4 sm:p-6 h-fit">
-                    <div className="flex items-center space-x-2 mb-6 text-indigo-900">
-                        <UserPlus className="w-5 h-5 relative -top-0.5" />
-                        <h2 className="text-base font-semibold">Provision New User</h2>
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-2 text-indigo-900">
+                             {isEditMode ? <Pencil className="w-5 h-5 relative -top-0.5" /> : <UserPlus className="w-5 h-5 relative -top-0.5" />}
+                            <h2 className="text-base font-semibold">{isEditMode ? 'Update User Details' : 'Provision New User'}</h2>
+                        </div>
+                        {isEditMode && (
+                            <button onClick={resetForm} className="text-xs text-gray-500 hover:text-gray-700 font-medium bg-white px-2 py-1 rounded border border-gray-200">
+                                Cancel
+                            </button>
+                        )}
                     </div>
 
-                    <form onSubmit={handleCreateUser} className="space-y-4">
+                    <form onSubmit={isEditMode ? handleUpdateUser : handleCreateUser} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                             <input
@@ -139,7 +220,7 @@ export default function TeamPage() {
                                 onChange={handleChange}
                                 type="text"
                                 className="w-full border border-gray-200 bg-white text-gray-700 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                placeholder="Alice Johnson"
+                                 placeholder="Alice Johnson"
                             />
                         </div>
 
@@ -152,20 +233,20 @@ export default function TeamPage() {
                                 onChange={handleChange}
                                 type="email"
                                 className="w-full border border-gray-200 text-gray-700 bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                placeholder="alice@focussync.com"
+                                placeholder="alice@e5chronicles.com"
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Temporary Password</label>
                             <input
-                                required
+                                required={!isEditMode}
                                 name="password"
                                 value={formData.password}
                                 onChange={handleChange}
                                 type="password"
                                 className="w-full border border-gray-200 text-gray-700 bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                placeholder="••••••••"
+                                placeholder={isEditMode ? "•••••••• (Leave blank to keep same)" : "••••••••"}
                             />
                         </div>
 
@@ -177,10 +258,49 @@ export default function TeamPage() {
                                 onChange={handleChange}
                                 className="w-full border border-gray-200 text-gray-700 bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                             >
-                                <option value="EMPLOYEE">Employee</option>
-                                {user?.role === 'ADMIN' && <option value="MANAGER">Manager</option>}
-                                {user?.role === 'ADMIN' && <option value="ADMIN">Admin</option>}
+                                 <option value="EMPLOYEE">Elite Member</option>
+                                {user?.role === 'ADMIN' && <option value="MANAGER">Creative Manager</option>}
+                                {user?.role === 'ADMIN' && <option value="ADMIN">Elite (Admin)</option>}
                             </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Unit / Department</label>
+                            <select
+                                name="unit"
+                                value={formData.unit}
+                                onChange={handleChange}
+                                className="w-full border border-gray-200 text-gray-700 bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                            >
+                                <option value="">Select Unit</option>
+                                <option value="PRODUCTION">Production Unit</option>
+                                <option value="CREATIVE_AND_STRATEGY">Creative & Strategy</option>
+                                <option value="GROWTH_AND_ENGAGEMENT">Growth & Engagement</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp / Phone</label>
+                            <input
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                type="text"
+                                className="w-full border border-gray-200 text-gray-700 bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                placeholder="+977 98..."
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                            <input
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                type="text"
+                                className="w-full border border-gray-200 text-gray-700 bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                placeholder="Kathmandu, Nepal"
+                            />
                         </div>
 
                         {user?.role !== 'ADMIN' && (
@@ -207,7 +327,7 @@ export default function TeamPage() {
                             disabled={submitStatus.loading}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center"
                         >
-                            {submitStatus.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                            {submitStatus.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditMode ? "Update Account" : "Create Account")}
                         </button>
                     </form>
                 </div>

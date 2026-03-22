@@ -11,7 +11,8 @@ import {
     LogOut,
     Target,
     MessageSquare,
-    ClipboardList
+    ClipboardList,
+    Contact2
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 
@@ -31,6 +32,7 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
                 return [
                     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
                     { name: 'Projects', href: '/admin/projects', icon: FolderKanban },
+                    { name: 'Clients', href: '/admin/clients', icon: Contact2 },
                     { name: 'Team', href: '/admin/team', icon: Users },
                     { name: 'Goals', href: '/admin/goals', icon: Target },
                     { name: 'Forms', href: '/admin/forms', icon: ClipboardList },
@@ -40,6 +42,7 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
                 return [
                     { name: 'Dashboard', href: '/manager/dashboard', icon: LayoutDashboard },
                     { name: 'Projects', href: '/admin/projects', icon: FolderKanban },
+                    { name: 'Clients', href: '/admin/clients', icon: Contact2 },
                     { name: 'Team', href: '/admin/team', icon: Users },
                     { name: 'Forms', href: '/admin/forms', icon: ClipboardList },
                 ];
@@ -64,9 +67,9 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
         <aside className="w-64 h-screen bg-[#F7F8FA] border-r border-gray-200 flex flex-col fixed left-0 top-0">
             <div className="p-6 flex items-center space-x-3">
                 <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">E</span>
+                    <span className="text-white font-bold text-sm">E5</span>
                 </div>
-                <span className="font-semibold text-gray-900 text-lg tracking-tight">FocusSync</span>
+                <span className="font-semibold text-gray-900 text-lg tracking-tight">E5 Chronicles</span>
             </div>
 
             <div className="px-4 mb-4">
@@ -76,7 +79,11 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'Loading...'}</p>
-                        <p className="text-xs text-gray-500 truncate">{user?.role || 'Guest'}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                            {user?.role === 'ADMIN' ? 'Elite' : 
+                             user?.role === 'MANAGER' ? 'Creative Manager' : 
+                             user?.role === 'EMPLOYEE' ? 'Elite Member' : 'Guest'}
+                        </p>
                     </div>
                 </div>
             </div>

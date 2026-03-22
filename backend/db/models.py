@@ -9,6 +9,17 @@ class UserRole(str, enum.Enum):
     MANAGER = "MANAGER"
     EMPLOYEE = "EMPLOYEE"
 
+class UserUnit(str, enum.Enum):
+    PRODUCTION = "PRODUCTION"
+    CREATIVE_AND_STRATEGY = "CREATIVE_AND_STRATEGY"
+    GROWTH_AND_ENGAGEMENT = "GROWTH_AND_ENGAGEMENT"
+
+class ReferralSource(str, enum.Enum):
+    DIRECT_WALK_IN = "DIRECT_WALK_IN"
+    FACEBOOK_AD = "FACEBOOK_AD"
+    FRIEND = "FRIEND"
+    OTHER = "OTHER"
+
 class TaskStatus(str, enum.Enum):
     TODO = "TODO"
     IN_PROGRESS = "IN_PROGRESS"
@@ -22,6 +33,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(SQLEnum(UserRole), default=UserRole.EMPLOYEE, nullable=False)
+    unit = Column(SQLEnum(UserUnit), nullable=True)
+    phone = Column(String, nullable=True)  # WhatsApp
+    location = Column(String, nullable=True)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
@@ -29,16 +43,65 @@ class User(Base):
     tasks = relationship("Task", back_populates="user", foreign_keys="Task.assigned_user")
     work_submissions = relationship("WorkSubmission", back_populates="employee")
     kpi_metrics = relationship("KPIMetric", back_populates="employee", uselist=False)
+    clients_created = relationship("Client", back_populates="creator")
+
+class Client(Base):
+    __tablename__ = "clients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_name = Column(String, index=True, nullable=False)
+    primary_contact_name = Column(String, index=True, nullable=False)
+    primary_contact_role = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    whatsapp = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    
+    # Social Media
+    facebook_url = Column(String, nullable=True)
+    tiktok_url = Column(String, nullable=True)
+    instagram_url = Column(String, nullable=True)
+    
+    referral_source = Column(SQLEnum(ReferralSource), default=ReferralSource.OTHER)
+    birthday = Column(DateTime(timezone=True), nullable=True)
+    anniversary = Column(DateTime(timezone=True), nullable=True)
+    
+    follow_up_date = Column(DateTime(timezone=True), nullable=True)
+    upsell_potential = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    creator = relationship("User", back_populates="clients_created")
+    projects = relationship("Project", back_populates="client")
 
 class Project(Base):
     __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
     start_date = Column(DateTime(timezone=True), nullable=False)
+    shooting_date = Column(DateTime(timezone=True), nullable=True)
+    delivery_date = Column(DateTime(timezone=True), nullable=True) # Renamed from deadline potentially or added
     deadline = Column(DateTime(timezone=True), nullable=False)
+    
     status = Column(String, default="ACTIVE", nullable=False)
+    service_category = Column(String, nullable=True) # e.g. Cinematic Car Shoot
+    
+    # Foundational / During
+    client_value_proposition = Column(Text, nullable=True)
+    total_budget = Column(Float, nullable=True)  # in NPR
+    current_spend = Column(Float, nullable=True)
+    resource_allocation = Column(Text, nullable=True) # Who is on-site
+    
+    # After Completion (Intelligence)
+    problem_solved = Column(Text, nullable=True)
+    shooting_fee = Column(Float, nullable=True)
+    editing_fee = Column(Float, nullable=True)
+    the_hook = Column(Text, nullable=True)
 
+    client = relationship("Client", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     work_submissions = relationship("WorkSubmission", back_populates="project")
 

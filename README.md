@@ -51,6 +51,6 @@ kill -9 11675
 kill -9 $(lsof -t -i:8000)
 
 
-
+git add . && git commit -m "User updates" && git push
 
 
