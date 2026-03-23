@@ -161,8 +161,8 @@ export default function TeamPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {users.map((u: any) => (
-                                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                                {Array.isArray(users) && users.map((u: any) => (
+                                    <tr key={u?.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.name}</td>
                                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
                                          <td className="px-4 py-4 whitespace-nowrap text-sm">
@@ -183,7 +183,7 @@ export default function TeamPage() {
                                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.phone || '-'}</td>
                                         <td className="px-4 py-4 whitespace-nowrap text-sm">
                                             <span className="text-indigo-600 font-medium italic">
-                                                {u.designation || '-'}
+                                                {u?.designation || '-'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.location || '-'}</td>
@@ -284,6 +284,7 @@ export default function TeamPage() {
                                 <option value="PRODUCTION">Production Unit</option>
                                 <option value="CREATIVE_AND_STRATEGY">Creative & Strategy</option>
                                 <option value="GROWTH_AND_ENGAGEMENT">Growth & Engagement</option>
+                                <option value="TEAM_DEVELOPMENT">Team Development</option>
                             </select>
                         </div>
 
