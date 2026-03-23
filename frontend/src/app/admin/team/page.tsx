@@ -20,7 +20,8 @@ export default function TeamPage() {
         role: 'EMPLOYEE',
         unit: '',
         phone: '',
-        location: ''
+        location: '',
+        designation: ''
     });
     const [submitStatus, setSubmitStatus] = useState({ loading: false, error: '', success: '' });
 
@@ -62,7 +63,7 @@ export default function TeamPage() {
         setEditingUserId(null);
         setFormData({ 
             name: '', email: '', password: '', role: 'EMPLOYEE',
-            unit: '', phone: '', location: ''
+            unit: '', phone: '', location: '', designation: ''
         });
         setSubmitStatus({ loading: false, error: '', success: '' });
     };
@@ -77,7 +78,8 @@ export default function TeamPage() {
             role: u.role || 'EMPLOYEE',
             unit: u.unit || '',
             phone: u.phone || '',
-            location: u.location || ''
+            location: u.location || '',
+            designation: u.designation || ''
         });
         setSubmitStatus({ loading: false, error: '', success: '' });
     };
@@ -153,6 +155,7 @@ export default function TeamPage() {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WhatsApp</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
@@ -178,6 +181,11 @@ export default function TeamPage() {
                                             ) : '-'}
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.phone || '-'}</td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-sm">
+                                            <span className="text-indigo-600 font-medium italic">
+                                                {u.designation || '-'}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{u.location || '-'}</td>
                                         <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
                                             <button onClick={() => openEditForm(u)} className="text-indigo-600 hover:text-indigo-900 font-medium transition-colors mr-3" title="Edit User">
@@ -277,6 +285,18 @@ export default function TeamPage() {
                                 <option value="CREATIVE_AND_STRATEGY">Creative & Strategy</option>
                                 <option value="GROWTH_AND_ENGAGEMENT">Growth & Engagement</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                            <input
+                                name="designation"
+                                value={formData.designation}
+                                onChange={handleChange}
+                                type="text"
+                                className="w-full border border-gray-200 text-gray-700 bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                placeholder="Lead Editor, Cinematographer, etc."
+                            />
                         </div>
 
                         <div>

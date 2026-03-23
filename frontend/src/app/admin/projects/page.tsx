@@ -72,10 +72,13 @@ export default function ProjectsPage() {
         e.preventDefault();
         setIsCreating(true);
         try {
-            const { client_id, ...rest } = formData;
+            const { client_id, shooting_date, delivery_date, total_budget, ...rest } = formData;
             const payload = {
                 ...rest,
-                ...(client_id ? { client_id: parseInt(client_id as any) } : {})
+                client_id: client_id ? parseInt(client_id as any) : null,
+                shooting_date: shooting_date || null,
+                delivery_date: delivery_date || null,
+                total_budget: total_budget ? parseFloat(total_budget as any) : null,
             };
             
             await api.post('/projects/', payload);
@@ -93,7 +96,11 @@ export default function ProjectsPage() {
             });
             fetchProjects();
         } catch (err: any) {
-            alert('Failed: ' + (err.response?.data?.detail || err.message));
+            const errorData = err.response?.data?.detail;
+            const errorMessage = Array.isArray(errorData) 
+                ? errorData.map((e: any) => `${e.loc.join('.')}: ${e.msg}`).join('\n')
+                : (typeof errorData === 'string' ? errorData : err.message);
+            alert('Failed to launch project:\n' + errorMessage);
         } finally { setIsCreating(false); }
     };
 
@@ -133,10 +140,14 @@ export default function ProjectsPage() {
         if (!editProject) return;
         setIsSavingEdit(true);
         try {
-            const { client_id, ...rest } = editForm;
+            const { client_id, total_budget, current_spend, shooting_fee, editing_fee, ...rest } = editForm;
             const payload = {
                 ...rest,
-                client_id: client_id ? parseInt(client_id) : null
+                client_id: client_id ? parseInt(client_id) : null,
+                total_budget: total_budget ? parseFloat(total_budget) : null,
+                current_spend: current_spend ? parseFloat(current_spend) : null,
+                shooting_fee: shooting_fee ? parseFloat(shooting_fee) : null,
+                editing_fee: editing_fee ? parseFloat(editing_fee) : null,
             };
             
             await api.put(`/projects/${editProject.id}`, payload);
