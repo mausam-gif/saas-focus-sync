@@ -17,7 +17,7 @@ def migrate_schema():
     cursor = conn.cursor()
 
     # 1. Add columns to 'users' table
-    for col_name, col_type in [("unit", "VARCHAR"), ("phone", "VARCHAR"), ("location", "VARCHAR")]:
+    for col_name, col_type in [("unit", "VARCHAR"), ("phone", "VARCHAR"), ("location", "VARCHAR"), ("designation", "VARCHAR")]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
         except sqlite3.OperationalError:

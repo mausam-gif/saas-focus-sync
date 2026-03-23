@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     unit: Optional[UserUnit] = None
     phone: Optional[str] = None
     location: Optional[str] = None
+    designation: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -22,6 +23,7 @@ class UserUpdate(BaseModel):
     unit: Optional[UserUnit] = None
     phone: Optional[str] = None
     location: Optional[str] = None
+    designation: Optional[str] = None
     manager_id: Optional[int] = None
 
 class UserResponse(UserBase):

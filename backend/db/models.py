@@ -36,6 +36,7 @@ class User(Base):
     unit = Column(SQLEnum(UserUnit), nullable=True)
     phone = Column(String, nullable=True)  # WhatsApp
     location = Column(String, nullable=True)
+    designation = Column(String, nullable=True)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
