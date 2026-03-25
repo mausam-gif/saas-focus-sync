@@ -135,8 +135,15 @@ def assign_form(
         raise HTTPException(status_code=404, detail="Form not found")
 
     created = []
-    for emp_id in assign_data.employee_ids:
-        # Check if already assigned
+    target_ids = list(assign_data.employee_ids)
+
+    if assign_data.is_company_wide:
+        # Get all active employees and managers
+        users = db.query(User).filter(User.role.in_([UserRole.EMPLOYEE, UserRole.MANAGER])).all()
+        target_ids = [u.id for u in users]
+
+    for emp_id in target_ids:
+        # Check if already assigned and not submitted
         existing = db.query(KPIFormAssignment).filter(
             KPIFormAssignment.form_id == form_id,
             KPIFormAssignment.employee_id == emp_id,
@@ -150,13 +157,18 @@ def assign_form(
             employee_id=emp_id,
             assigned_by=current_user.id,
             due_date=assign_data.due_date,
+            is_company_wide=assign_data.is_company_wide,
             is_submitted=False
         )
         db.add(assignment)
         created.append(emp_id)
 
     db.commit()
-    return {"message": f"Form assigned to {len(created)} employee(s)", "assigned_to": created}
+    return {
+        "message": f"Form assigned to {len(created)} employee(s)",
+        "assigned_to": created,
+        "is_company_wide": assign_data.is_company_wide
+    }
 
 
 # ─── Delete Form ──────────────────────────────────────────────────────────────

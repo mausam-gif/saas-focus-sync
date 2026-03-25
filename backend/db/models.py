@@ -239,7 +239,8 @@ class KPIFormAssignment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     form_id = Column(Integer, ForeignKey("kpi_forms.id"), nullable=False)
-    employee_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    employee_id = Column(Integer, ForeignKey("users.id"), nullable=True) # Nullable for company-wide templates
+    is_company_wide = Column(Boolean, default=False)
     assigned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     due_date = Column(DateTime(timezone=True), nullable=True)
     is_submitted = Column(Boolean, default=False)

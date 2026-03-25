@@ -1,11 +1,14 @@
 "use client";
 import React from 'react';
-import { Send, Users, ChartBar, CheckCircle2, User, Loader2, ClipboardList } from 'lucide-react';
-
-
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { api, API_BASE_URL } from '@/lib/api';
+import { GanttChart } from '@/components/GanttChart';
+import {
+    Plus, Search, Filter, Shield, MoreVertical, Trash2, Edit, CheckCircle, CheckCircle2,
+    User, Send, MessageSquare, Briefcase, Calendar, BarChart2, TrendingUp, Clock,
+    Users, ChartBar, Loader2, ClipboardList, UploadCloud, AlertCircle
+} from 'lucide-react';
 
 export default function ManagerDashboard() {
     const { user, loading: authLoading } = useAuth();
@@ -38,6 +41,15 @@ export default function ManagerDashboard() {
     const [editTaskId, setEditTaskId] = React.useState<number | null>(null);
     const [editTaskForm, setEditTaskForm] = React.useState({ title: '', status: '' });
     const [isSavingTaskEdit, setIsSavingTaskEdit] = React.useState(false);
+    const [myPersonalTasks, setMyPersonalTasks] = React.useState<any[]>([]);
+    const [allProjects, setAllProjects] = React.useState<any[]>([]);
+    
+    // Work Submission state
+    const [submitProjectId, setSubmitProjectId] = React.useState<string>('');
+    const [submitComment, setSubmitComment] = React.useState('');
+    const [isSubmittingWork, setIsSubmittingWork] = React.useState(false);
+    const [uploadFile, setUploadFile] = React.useState<File | null>(null);
+    const workFileInputRef = React.useRef<HTMLInputElement>(null);
 
     React.useEffect(() => {
         if (!authLoading && !user) {
@@ -46,7 +58,7 @@ export default function ManagerDashboard() {
         }
 
         if (user && !authLoading) {
-            api.get('/users/').then(res => setTeam(res.data.filter((u: any) => u.id !== user.id && u.role.toUpperCase() === 'EMPLOYEE')));
+            api.get('/users/').then(res => setTeam(res.data.filter((u: any) => u.id !== user.id)));
             const roleMap: Record<string, string> = { 'ADMIN': 'Elite', 'MANAGER': 'Creative Manager', 'EMPLOYEE': 'Elite Member' };
             api.get('/analytics/').then(res => {
                 const kpis = res.data;
@@ -59,8 +71,15 @@ export default function ManagerDashboard() {
             });
             api.get('/kpi-forms/analytics/overview').then(res => setKpiAnalytics(res.data)).catch(() => { });
             api.get('/questions/').then(res => setQuestions(res.data));
-            api.get('/projects/').then(res => setTaskProjects(res.data));
-            api.get('/tasks/').then(res => setSentTasks(res.data));
+            api.get('/projects/').then(res => {
+                setTaskProjects(res.data);
+                setAllProjects(res.data);
+            });
+            api.get('/tasks/').then(res => {
+                setSentTasks(res.data);
+                // Filter tasks assigned TO me
+                setMyPersonalTasks(res.data.filter((t: any) => t.assigned_user === user.id));
+            });
         }
     }, [user, authLoading, router]);
 
@@ -154,6 +173,66 @@ export default function ManagerDashboard() {
         } catch (err: any) { alert('Failed: ' + (err.response?.data?.detail || err.message)); }
     };
 
+    const handleUpdateTaskStatus = async (taskId: number, currentStatus: string) => {
+        const statuses = ['TODO', 'IN_PROGRESS', 'DONE'];
+        const nextStatus = statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length];
+        try {
+            await api.put(`/tasks/${taskId}`, { status: nextStatus });
+            const res = await api.get('/tasks/');
+            setSentTasks(res.data);
+            setMyPersonalTasks(res.data.filter((t: any) => t.assigned_user === user.id));
+        } catch { alert('Failed to update task.'); }
+    };
+
+    const handleSubmitWork = async () => {
+        if (!submitProjectId) return alert('Please select a project.');
+        if (!uploadFile && !submitComment) return alert('Please attach a file or add a comment.');
+        setIsSubmittingWork(true);
+        try {
+            let fileUrl = '';
+            if (uploadFile) {
+                const formData = new FormData();
+                formData.append('file', uploadFile);
+                const res = await api.post('/upload/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                fileUrl = `${API_BASE_URL}${res.data.url}`;
+            }
+            await api.post('/submissions/', { project_id: parseInt(submitProjectId), file_url: fileUrl, comment: submitComment });
+            setUploadFile(null);
+            setSubmitComment('');
+            if (workFileInputRef.current) workFileInputRef.current.value = '';
+            alert('Work submitted successfully!');
+        } catch (err: any) {
+            alert('Failed to submit: ' + (err.response?.data?.detail || err.message));
+        } finally {
+            setIsSubmittingWork(false);
+        }
+    };
+
+    const today = new Date();
+    const ganttTasks = allProjects.map((p: any) => {
+        let progress = 20;
+        let customClass = 'bar-analysis';
+        const s = p.status?.toUpperCase();
+        if (s === 'EVALUATION' || s === 'COMPLETED') { progress = 100; customClass = 'bar-evaluation'; }
+        else if (s === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
+        else if (s === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
+        else if (s === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
+        else { progress = 20; customClass = 'bar-analysis'; }
+
+        const start = p.start_date ? p.start_date.split('T')[0] : today.toISOString().split('T')[0];
+        const rawEnd = p.deadline ? p.deadline.split('T')[0] : start;
+        const end = rawEnd <= start ? start : rawEnd;
+        return {
+            id: `proj-${p.id}`,
+            name: p.name,
+            start,
+            end,
+            progress,
+            dependencies: '',
+            custom_class: customClass,
+        };
+    });
+
     return (
         <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
             <div className="mb-6 sm:mb-8">
@@ -184,9 +263,36 @@ export default function ManagerDashboard() {
                 })}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8">
+                {/* ── Project Timeline & Gantt ── */}
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2">
+                            <Calendar className="w-5 h-5 text-indigo-500" />
+                            <span>Project Timeline & Deadlines</span>
+                        </h2>
+                        {allProjects.some((p: any) => p.deadline && new Date(p.deadline) < today) && (
+                            <span className="flex items-center space-x-1 text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded-full font-medium">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>Overdue projects</span>
+                            </span>
+                        )}
+                    </div>
+
+                    {allProjects.length > 0 ? (
+                        <div className="overflow-hidden rounded-xl border border-gray-100">
+                            <GanttChart tasks={ganttTasks} />
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 text-gray-400">
+                            <Calendar className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                            <p className="text-sm font-medium">No projects yet.</p>
+                        </div>
+                    )}
+                </div>
+
                 {/* KPI Panel - Forms-Driven Swappable */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
+                <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
                     <div className="mb-4">
                         <h2 className="text-base font-semibold text-gray-900 mb-3">Team KPI Performance</h2>
                         <p className="text-xs text-gray-500 mb-3">Based on KPI form submissions.</p>
@@ -299,7 +405,6 @@ export default function ManagerDashboard() {
                         </div>
                     )}
                 </div>
-
             </div>
 
             {/* ── Assign Task Panel ── */}
@@ -400,6 +505,37 @@ export default function ManagerDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* ── My Personal Tasks (Assigned to Me) ── */}
+            {myPersonalTasks.length > 0 && (
+                <div className="bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-sm p-4 sm:p-6">
+                    <h2 className="text-base font-semibold text-indigo-900 flex items-center space-x-2 mb-4">
+                        <Clock className="w-5 h-5 text-indigo-500" />
+                        <span>Tasks Assigned to Me</span>
+                        <span className="ml-auto text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">{myPersonalTasks.length} pending</span>
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {myPersonalTasks.map((t: any) => (
+                            <div key={t.id} className="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                                onClick={() => handleUpdateTaskStatus(t.id, t.status)}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <p className="text-sm font-bold text-gray-900 truncate pr-2">{t.title}</p>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                        t.status === 'DONE' ? 'bg-green-100 text-green-700' :
+                                        t.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-gray-100 text-gray-600'
+                                    }`}>{t.status?.replace('_', ' ')}</span>
+                                </div>
+                                <p className="text-xs text-gray-500 line-clamp-2 mb-3">{t.description || 'No description provided.'}</p>
+                                <div className="flex items-center justify-between mt-auto">
+                                    <span className="text-[10px] text-gray-400">Click to update status</span>
+                                    {t.project_name && <span className="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Project: {t.project_name}</span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Check-in */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
@@ -518,57 +654,116 @@ export default function ManagerDashboard() {
                     </div>
                 </div>
             </div>
-
-            {/* Recent Responses Section */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2 mb-6 text-indigo-900 border-b border-indigo-50 pb-2">
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span>Recent Team Responses</span>
-                </h2>
-                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                    {questions.filter(q => q.responses && q.responses.length > 0).map((q: any) => (
-                        <div key={q.id} className="border border-gray-100 p-4 rounded-xl hover:bg-gray-50 transition-colors">
-                            <div className="flex justify-between items-start mb-2">
-                                <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Q: {q.question_text || '[Attachment]'}</span>
-                                    <span className="text-[10px] text-gray-500 mt-0.5">Asked by: <span className="font-semibold text-indigo-700">{q.creator?.name || 'Unknown'}</span> ({ (q.creator?.role === 'ADMIN' ? 'Elite' : q.creator?.role === 'MANAGER' ? 'Creative Manager' : q.creator?.role) || 'SYSTEM'})</span>
-                                </div>
-                                <span className="text-[10px] text-gray-400">{new Date().toLocaleDateString()}</span>
-                            </div>
-                            {q.attachment_url && (
-                                <div className="mb-2">
-                                    {q.attachment_type === 'audio' ? (
-                                        <audio controls src={`${API_BASE_URL}${q.attachment_url}`} className="h-8 w-full" />
-                                    ) : q.attachment_type === 'image' ? (
-                                        <img src={`${API_BASE_URL}${q.attachment_url}`} alt="attachment" className="max-h-32 rounded-lg border" />
-                                    ) : (
-                                        <a href={`${API_BASE_URL}${q.attachment_url}`} target="_blank" rel="noopener noreferrer"
-                                            className="text-xs text-indigo-600 underline flex items-center space-x-1">
-                                            <span>📄</span><span>View Attachment</span>
-                                        </a>
-                                    )}
-                                </div>
-                            )}
-                            {q.responses.map((r: any) => (
-                                <div key={r.id} className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 ml-4 mt-2">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                        <div className="w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center flex-shrink-0">
-                                            <span className="text-indigo-800 font-bold text-[10px] uppercase">
-                                                {r.employee_name ? r.employee_name.charAt(0) : 'E'}
-                                            </span>
-                                        </div>
-                                        <span className="text-xs font-semibold text-gray-700">{r.employee_name || 'Elite Member'}</span>
+            {/* Previous section (Check-in) grid ends at 656 */}
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                {/* Recent Responses Section */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col">
+                    <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2 mb-6 text-indigo-900 border-b border-indigo-50 pb-2">
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span>Recent Team Responses</span>
+                    </h2>
+                    <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
+                        {questions.filter(q => q.responses && q.responses.length > 0).map((q: any) => (
+                            <div key={q.id} className="border border-gray-100 p-4 rounded-xl hover:bg-gray-50 transition-colors">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Q: {q.question_text || '[Attachment]'}</span>
+                                        <span className="text-[10px] text-gray-500 mt-0.5">Asked by: <span className="font-semibold text-indigo-700">{q.creator?.name || 'Unknown'}</span> ({ (q.creator?.role === 'ADMIN' ? 'Elite' : q.creator?.role === 'MANAGER' ? 'Creative Manager' : q.creator?.role) || 'SYSTEM'})</span>
                                     </div>
-                                    <p className="text-sm text-gray-800 pl-7">{r.response_text}</p>
+                                    <span className="text-[10px] text-gray-400">{new Date().toLocaleDateString()}</span>
                                 </div>
-                            ))}
+                                {q.attachment_url && (
+                                    <div className="mb-2">
+                                        {q.attachment_type === 'audio' ? (
+                                            <audio controls src={`${API_BASE_URL}${q.attachment_url}`} className="h-8 w-full" />
+                                        ) : q.attachment_type === 'image' ? (
+                                            <img src={`${API_BASE_URL}${q.attachment_url}`} alt="attachment" className="max-h-32 rounded-lg border" />
+                                        ) : (
+                                            <a href={`${API_BASE_URL}${q.attachment_url}`} target="_blank" rel="noopener noreferrer"
+                                                className="text-xs text-indigo-600 underline flex items-center space-x-1">
+                                                <span>📄</span><span>View Attachment</span>
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                                {q.responses.map((r: any) => (
+                                    <div key={r.id} className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 ml-4 mt-2">
+                                        <div className="flex items-center space-x-2 mb-1">
+                                            <div className="w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-indigo-800 font-bold text-[10px] uppercase">
+                                                    {r.employee_name ? r.employee_name.charAt(0) : 'E'}
+                                                </span>
+                                            </div>
+                                            <span className="text-xs font-semibold text-gray-700">{r.employee_name || 'Elite Member'}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-800 pl-7">{r.response_text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                        {questions.filter(q => q.responses && q.responses.length > 0).length === 0 && (
+                            <p className="text-sm text-gray-500 text-center py-8 italic">No responses from your team yet.</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Submit Work Panel for Manager */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex flex-col">
+                    <h2 className="text-base font-semibold text-gray-900 flex items-center space-x-2 mb-2">
+                        <UploadCloud className="w-5 h-5 text-purple-500" />
+                        <span>Submit My Work</span>
+                    </h2>
+                    <p className="text-xs text-gray-500 mb-5">Upload a file or add a note for any project you are working on.</p>
+
+                    <div className="flex-1 flex flex-col space-y-3">
+                        <select value={submitProjectId} onChange={e => setSubmitProjectId(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="" disabled>Select Project...</option>
+                            {allProjects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+
+                        <input ref={workFileInputRef} type="file" className="hidden"
+                            onChange={e => setUploadFile(e.target.files?.[0] || null)} />
+                        <div onClick={() => workFileInputRef.current?.click()}
+                            className="border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center p-5 cursor-pointer min-h-[100px]">
+                            {uploadFile ? (
+                                <div className="flex items-center space-x-2">
+                                    <span className="text-2xl">{uploadFile.type.startsWith('image') ? '🖼️' : uploadFile.type.startsWith('video') ? '🎬' : '📄'}</span>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-800 truncate max-w-[180px]">{uploadFile.name}</p>
+                                        <p className="text-xs text-gray-400">{(uploadFile.size / 1024).toFixed(0)} KB</p>
+                                    </div>
+                                    <button type="button" onClick={e => { e.stopPropagation(); setUploadFile(null); if (workFileInputRef.current) workFileInputRef.current.value = ''; }}
+                                        className="text-red-400 hover:text-red-600 text-xl ml-2">&times;</button>
+                                </div>
+                            ) : (
+                                <>
+                                    <UploadCloud className="w-7 h-7 text-gray-400 mb-1" />
+                                    <p className="text-sm font-medium text-gray-600">Click to upload</p>
+                                    <p className="text-[10px] text-gray-400 mt-0.5">Video, Image, or Document</p>
+                                </>
+                            )}
                         </div>
-                    ))}
-                    {questions.filter(q => q.responses && q.responses.length > 0).length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-8 italic">No responses from your team yet.</p>
-                    )}
+
+                        <textarea value={submitComment} onChange={e => setSubmitComment(e.target.value)} rows={2}
+                            className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none placeholder-gray-400"
+                            placeholder="Add a note or description..." />
+
+                        <button onClick={handleSubmitWork} disabled={isSubmittingWork || !submitProjectId}
+                            className="bg-indigo-600 text-white w-full py-2.5 rounded-lg flex items-center justify-center space-x-2 hover:bg-indigo-700 transition-colors shadow-sm font-semibold text-sm mt-auto disabled:bg-indigo-300 disabled:cursor-not-allowed">
+                            <UploadCloud className="w-4 h-4" />
+                            <span>{isSubmittingWork ? 'Submitting...' : 'Submit Work'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 20px; }
+            `}} />
         </div>
     );
 }

@@ -73,8 +73,10 @@ def read_tasks(
         tasks = db.query(Task).offset(skip).limit(limit).all()
     elif current_user.role == UserRole.MANAGER:
         # Tasks assigned by this manager OR tasks assigned to employees managed by this manager
+        # OR tasks assigned TO this manager (new)
         tasks = db.query(Task).filter(
             (Task.assigned_by == current_user.id) |
+            (Task.assigned_user == current_user.id) |
             (Task.assigned_user.in_(
                 db.query(User.id).filter(User.manager_id == current_user.id)
             ))

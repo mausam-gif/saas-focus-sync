@@ -102,6 +102,23 @@ def seed_db():
     kpi3 = KPIMetric(employee_id=e3.id, productivity_score=75.0, task_completion_rate=80.0, efficiency_score=70.0)
     
     db.add_all([kpi1, kpi2, kpi3])
+    
+    # ─── Create Project Evaluation KPI Form ───
+    from db.models import KPIForm, KPIQuestion, KPIQuestionType
+    eval_form = KPIForm(
+        title="Project Evaluation Form",
+        description="Standard evaluation for completed project stages.",
+        created_by=admin.id,
+        is_active=True
+    )
+    db.add(eval_form)
+    db.flush()
+
+    q1 = KPIQuestion(form_id=eval_form.id, question_text="How would you rate the overall project quality?", question_type=KPIQuestionType.RATING, weight=0.4, order=0)
+    q2 = KPIQuestion(form_id=eval_form.id, question_text="Was the timeline followed strictly?", question_type=KPIQuestionType.RATING, weight=0.3, order=1)
+    q3 = KPIQuestion(form_id=eval_form.id, question_text="Any challenges faced during execution?", question_type=KPIQuestionType.TEXT, weight=0.3, order=2)
+    db.add_all([q1, q2, q3])
+
     db.commit()
 
     print("Successfully seeded database with users, projects, tasks, and KPIs!")

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from api import deps
 from db.models import Project, User, UserRole
 from schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from api.utils.automation import trigger_project_automation
 
 router = APIRouter()
 
@@ -21,6 +22,7 @@ def create_project(
     db.add(project)
     db.commit()
     db.refresh(project)
+    trigger_project_automation(db, project, is_new=True)
     return project
 
 @router.get("/", response_model=List[ProjectResponse])
@@ -70,6 +72,8 @@ def update_project(
     db.add(project)
     db.commit()
     db.refresh(project)
+    if "status" in update_data:
+        trigger_project_automation(db, project)
     return project
 
 

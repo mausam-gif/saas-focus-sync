@@ -59,11 +59,9 @@ def read_users(
     if current_user.role == UserRole.ADMIN:
         users = db.query(User).offset(skip).limit(limit).all()
     elif current_user.role == UserRole.MANAGER:
-        # Managers can see all employees (as requested for interconnected features)
-        employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).offset(skip).limit(limit).all()
-        # Managers can also see themselves
-        users = [current_user] + employees
-        # deduplicate in case manager is also an employee (though they have different roles)
+        # Managers can see everyone (as previously requested for interconnected features)
+        users = db.query(User).offset(skip).limit(limit).all()
+        # deduplicate NOT needed for this query, but in case of manual list merging:
         seen_ids = set()
         unique_users = []
         for u in users:

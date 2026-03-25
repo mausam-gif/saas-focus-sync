@@ -42,13 +42,15 @@ class KPIFormResponse(BaseModel):
 # ── Assignment Schemas ────────────────────────────────────────────────────────
 
 class AssignFormRequest(BaseModel):
-    employee_ids: List[int]
+    employee_ids: List[int] = []
+    is_company_wide: bool = False
     due_date: Optional[datetime] = None
 
 class KPIAssignmentResponse(BaseModel):
     id: int
     form_id: int
-    employee_id: int
+    employee_id: Optional[int] = None
+    is_company_wide: bool = False
     employee_name: Optional[str] = None
     assigned_by: int
     due_date: Optional[datetime]

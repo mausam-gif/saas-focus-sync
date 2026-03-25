@@ -77,9 +77,15 @@ export default function EmployeeDashboard() {
 
     // Gantt tasks — ALL projects visible to employee
     const ganttTasks = projects.map((p: any) => {
-        const projectTasks = tasks.filter((t: any) => t.project_id === p.id);
-        const done = projectTasks.filter((t: any) => t.status === 'DONE').length;
-        const progress = projectTasks.length > 0 ? Math.round((done / projectTasks.length) * 100) : 0;
+        let progress = 20;
+        let customClass = 'bar-analysis';
+        const s = p.status?.toUpperCase();
+        if (s === 'EVALUATION' || s === 'COMPLETED') { progress = 100; customClass = 'bar-evaluation'; }
+        else if (s === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
+        else if (s === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
+        else if (s === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
+        else { progress = 20; customClass = 'bar-analysis'; }
+
         const start = p.start_date ? p.start_date.split('T')[0] : today.toISOString().split('T')[0];
         const rawEnd = p.deadline ? p.deadline.split('T')[0] : start;
         const end = rawEnd <= start ? start : rawEnd;
@@ -90,9 +96,7 @@ export default function EmployeeDashboard() {
             end,
             progress,
             dependencies: '',
-            custom_class: p.status === 'COMPLETED' ? 'gantt-done'
-                : new Date(p.deadline) < today ? 'gantt-overdue'
-                : 'gantt-active',
+            custom_class: customClass,
         };
     });
 
@@ -586,9 +590,6 @@ export default function EmployeeDashboard() {
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 20px; }
-                .gantt .bar-wrapper.gantt-overdue .bar { fill: #ef4444 !important; }
-                .gantt .bar-wrapper.gantt-done .bar { fill: #22c55e !important; }
-                .gantt .bar-wrapper.gantt-active .bar { fill: #6366f1 !important; }
             `}} />
         </div>
     );

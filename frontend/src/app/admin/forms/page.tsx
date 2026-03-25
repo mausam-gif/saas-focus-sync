@@ -45,6 +45,7 @@ export default function AdminFormsPage() {
     const [employees, setEmployees] = useState<any[]>([]);
     const [assigningFormId, setAssigningFormId] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+    const [isCompanyWide, setIsCompanyWide] = useState(false);
     const [dueDate, setDueDate] = useState('');
 
     // Analytics
@@ -142,12 +143,14 @@ export default function AdminFormsPage() {
         if (selectedEmployees.length === 0) return alert('Select at least one employee.');
         try {
             await api.post(`/kpi-forms/${formId}/assign`, {
-                employee_ids: selectedEmployees,
+                employee_ids: isCompanyWide ? [] : selectedEmployees,
+                is_company_wide: isCompanyWide,
                 due_date: dueDate || null
             });
             alert('Form assigned successfully!');
             setAssigningFormId(null);
             setSelectedEmployees([]);
+            setIsCompanyWide(false);
             setDueDate('');
             loadForms();
         } catch (err: any) {
@@ -322,16 +325,25 @@ export default function AdminFormsPage() {
                                 {/* Assign Panel */}
                                 {assigningFormId === form.id && (
                                     <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                                        <h4 className="text-sm font-medium text-gray-700">Assign to Employees</h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                            {employees.map(emp => (
-                                                <label key={emp.id} className={`flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition-colors ${selectedEmployees.includes(emp.id) ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-indigo-200'}`}>
-                                                    <input type="checkbox" checked={selectedEmployees.includes(emp.id)}
-                                                        onChange={e => setSelectedEmployees(prev => e.target.checked ? [...prev, emp.id] : prev.filter(id => id !== emp.id))}
-                                                        className="accent-indigo-600" />
-                                                    <span className="text-sm text-gray-800">{emp.name}</span>
-                                                </label>
-                                            ))}
+                                        <div className="flex flex-col space-y-3">
+                                            <label className="flex items-center space-x-2 p-2 rounded-lg border border-indigo-200 bg-indigo-50 cursor-pointer w-fit">
+                                                <input type="checkbox" checked={isCompanyWide} onChange={e => setIsCompanyWide(e.target.checked)}
+                                                    className="w-4 h-4 accent-indigo-600" />
+                                                <span className="text-sm font-semibold text-indigo-700">Assign to All Member Types (Company KPI)</span>
+                                            </label>
+
+                                            {!isCompanyWide && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                    {employees.map(emp => (
+                                                        <label key={emp.id} className={`flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition-colors ${selectedEmployees.includes(emp.id) ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-indigo-200'}`}>
+                                                            <input type="checkbox" checked={selectedEmployees.includes(emp.id)}
+                                                                onChange={e => setSelectedEmployees(prev => e.target.checked ? [...prev, emp.id] : prev.filter(id => id !== emp.id))}
+                                                                className="accent-indigo-600" />
+                                                            <span className="text-sm text-gray-800">{emp.name}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex items-center space-x-3">
                                             <div>
@@ -341,7 +353,7 @@ export default function AdminFormsPage() {
                                             </div>
                                             <button onClick={() => handleAssign(form.id)}
                                                 className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-                                                Assign Selected
+                                                {isCompanyWide ? 'Assign to All' : 'Assign Selected'}
                                             </button>
                                         </div>
                                     </div>
