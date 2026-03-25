@@ -37,11 +37,24 @@ def migrate_schema():
             pass
 
     # 3. Add columns to 'clients' table
-    for col_name, col_type in [("referral_source_other", "VARCHAR")]:
+    for col_name, col_type in [("referral_source_other", "VARCHAR"), ("logo_url", "VARCHAR")]:
         try:
             cursor.execute(f"ALTER TABLE clients ADD COLUMN {col_name} {col_type}")
         except sqlite3.OperationalError:
             pass
+
+    # 4. Create 'client_documents' table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS client_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            file_name VARCHAR NOT NULL,
+            file_url VARCHAR NOT NULL,
+            file_type VARCHAR,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES clients (id)
+        )
+    """)
 
     conn.commit()
     conn.close()

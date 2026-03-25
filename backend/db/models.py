@@ -66,6 +66,7 @@ class Client(Base):
     
     referral_source = Column(SQLEnum(ReferralSource), default=ReferralSource.OTHER)
     referral_source_other = Column(String, nullable=True)
+    logo_url = Column(String, nullable=True)
     birthday = Column(DateTime(timezone=True), nullable=True)
     anniversary = Column(DateTime(timezone=True), nullable=True)
     
@@ -77,6 +78,19 @@ class Client(Base):
 
     creator = relationship("User", back_populates="clients_created")
     projects = relationship("Project", back_populates="client")
+    documents = relationship("ClientDocument", back_populates="client", cascade="all, delete-orphan")
+
+class ClientDocument(Base):
+    __tablename__ = "client_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    file_name = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    file_type = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    client = relationship("Client", back_populates="documents")
 
 class Project(Base):
     __tablename__ = "projects"

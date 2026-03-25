@@ -17,10 +17,20 @@ def create_client(
     """
     Create new client.
     """
+    # Extract documents
+    documents_data = client_in.documents or []
+    client_data = client_in.model_dump(exclude={"documents"})
+    
     client = Client(
-        **client_in.model_dump(),
+        **client_data,
         created_by=current_user.id
     )
+    
+    # Add documents
+    from db.models import ClientDocument
+    for doc in documents_data:
+        client.documents.append(ClientDocument(**doc.model_dump()))
+        
     db.add(client)
     db.commit()
     db.refresh(client)
@@ -69,9 +79,15 @@ def update_client(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    update_data = client_in.model_dump(exclude_unset=True)
+    update_data = client_in.model_dump(exclude_unset=True, exclude={"documents"})
     for field, value in update_data.items():
         setattr(client, field, value)
+        
+    # Handle documents if provided
+    if client_in.documents is not None:
+        from db.models import ClientDocument
+        # Clear existing and replace (simple approach)
+        client.documents = [ClientDocument(**doc.model_dump()) for doc in client_in.documents]
         
     db.add(client)
     db.commit()

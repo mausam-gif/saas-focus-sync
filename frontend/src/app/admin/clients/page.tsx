@@ -21,7 +21,10 @@ import {
     Pencil,
     Users,
     MessageSquare,
-    ExternalLink
+    ExternalLink,
+    Upload,
+    FileText,
+    Paperclip
 } from 'lucide-react';
 
 export default function ClientsPage() {
@@ -48,7 +51,9 @@ export default function ClientsPage() {
         birthday: '',
         anniversary: '',
         follow_up_date: '',
-        upsell_potential: ''
+        upsell_potential: '',
+        logo_url: '',
+        documents: [] as any[]
     });
 
     useEffect(() => {
@@ -128,7 +133,9 @@ export default function ClientsPage() {
             birthday: client.birthday ? client.birthday.split('T')[0] : '',
             anniversary: client.anniversary ? client.anniversary.split('T')[0] : '',
             follow_up_date: client.follow_up_date ? client.follow_up_date.split('T')[0] : '',
-            upsell_potential: client.upsell_potential || ''
+            upsell_potential: client.upsell_potential || '',
+            logo_url: client.logo_url || '',
+            documents: client.documents || []
         });
         setIsFormOpen(true);
     };
@@ -142,8 +149,28 @@ export default function ClientsPage() {
             phone: '', whatsapp: '', email: '', location: '',
             facebook_url: '', tiktok_url: '', instagram_url: '',
             referral_source: 'OTHER', referral_source_other: '', birthday: '', anniversary: '',
-            follow_up_date: '', upsell_potential: ''
+            follow_up_date: '', upsell_potential: '',
+            logo_url: '', documents: []
         });
+    };
+
+    const handleFileUpload = async (file: File, type: 'logo' | 'document') => {
+        try {
+            const formDataUpload = new FormData();
+            formDataUpload.append('file', file);
+            const res = await api.post('/upload/', formDataUpload);
+            if (type === 'logo') {
+                setFormData(prev => ({ ...prev, logo_url: res.data.url }));
+            } else {
+                setFormData(prev => ({
+                    ...prev,
+                    documents: [...prev.documents, { file_name: file.name, file_url: res.data.url, file_type: file.type }]
+                }));
+            }
+        } catch (err) {
+            console.error("Upload failed", err);
+            alert("File upload failed. Please try again.");
+        }
     };
 
     const handleDeleteClient = async (id: number) => {
@@ -214,12 +241,21 @@ export default function ClientsPage() {
                             )}
                         </div>
                         
-                        <div>
-                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
-                                {client.referral_source === 'OTHER' && client.referral_source_other ? client.referral_source_other : client.referral_source.replace(/_/g, ' ')}
-                            </span>
-                            <h3 className="text-lg font-bold text-gray-900 leading-tight">{client.business_name}</h3>
-                            <p className="text-sm text-gray-500 font-medium">{client.primary_contact_name} · {client.primary_contact_role}</p>
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 overflow-hidden border border-indigo-100 shadow-sm">
+                                {client.logo_url ? (
+                                    <img src={client.logo_url} alt={client.business_name} className="h-full w-full object-cover" />
+                                ) : (
+                                    <Users size={24} />
+                                )}
+                            </div>
+                            <div>
+                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                                    {client.referral_source === 'OTHER' && client.referral_source_other ? client.referral_source_other : client.referral_source.replace(/_/g, ' ')}
+                                </span>
+                                <h3 className="text-lg font-bold text-gray-900 leading-tight">{client.business_name}</h3>
+                                <p className="text-sm text-gray-500 font-medium">{client.primary_contact_name} · {client.primary_contact_role}</p>
+                            </div>
                         </div>
 
                         <div className="space-y-2 pt-2 border-t border-gray-50">
@@ -299,10 +335,93 @@ export default function ClientsPage() {
                                     <label className="text-xs font-bold text-gray-500 uppercase">Phone / WhatsApp</label>
                                     <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm" placeholder="+977 98..." />
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Email</label>
-                                    <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm" placeholder="client@example.com" />
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Client Logo / Photo</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-20 w-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden relative group font-sans">
+                                            {formData.logo_url ? (
+                                                <>
+                                                    <img src={formData.logo_url} alt="Logo" className="h-full w-full object-cover" />
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => setFormData({...formData, logo_url: ''})}
+                                                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 className="text-white" size={20} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <Upload className="text-gray-300" size={24} />
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <input 
+                                                type="file" 
+                                                id="logo-upload" 
+                                                className="hidden" 
+                                                accept="image/*"
+                                                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'logo')}
+                                            />
+                                            <label 
+                                                htmlFor="logo-upload"
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                                            >
+                                                <Plus size={16} />
+                                                Choose Logo
+                                            </label>
+                                            <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold">Recommended: PNG/JPG</p>
+                                        </div>
+                                    </div>
                                 </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Related Documents</label>
+                                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                                        {formData.documents?.map((doc: any, idx: number) => (
+                                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <FileText size={14} className="text-indigo-500 shrink-0" />
+                                                    <span className="text-xs font-medium text-gray-600 truncate">{doc.file_name}</span>
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setFormData({...formData, documents: formData.documents.filter((_: any, i: number) => i !== idx)})}
+                                                    className="p-1 text-gray-400 hover:text-red-500"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {(!formData.documents || formData.documents.length === 0) && (
+                                            <p className="text-[10px] text-gray-400 italic py-2">No documents attached yet.</p>
+                                        )}
+                                    </div>
+                                    <input 
+                                        type="file" 
+                                        id="doc-upload" 
+                                        className="hidden" 
+                                        multiple
+                                        onChange={(e) => {
+                                            if (e.target.files) {
+                                                Array.from(e.target.files).forEach(file => handleFileUpload(file, 'document'));
+                                            }
+                                        }}
+                                    />
+                                    <label 
+                                        htmlFor="doc-upload"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer pt-1 uppercase"
+                                    >
+                                        <Paperclip size={14} />
+                                        Attach Document
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase">Email Address</label>
+                                <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm" placeholder="client@example.com" />
                             </div>
 
                             <div className="space-y-1">
