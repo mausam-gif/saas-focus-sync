@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import { FolderKanban, Plus, Clock, Loader2, Target, Pencil, Trash2, X, Check, AlertTriangle, Users } from 'lucide-react';
 
 const STATUS_STYLES: Record<string, string> = {
-    'ACTIVE':    'bg-indigo-100 text-indigo-800 border-indigo-300',
-    'ON TRACK':  'bg-blue-100   text-blue-800   border-blue-300',
-    'AT RISK':   'bg-red-100    text-red-800    border-red-300',
-    'COMPLETED': 'bg-green-100  text-green-800  border-green-300',
+    'ANALYSIS':   'bg-blue-100 text-blue-800 border-blue-300',
+    'STRATEGY':   'bg-purple-100 text-purple-800 border-purple-300',
+    'EXECUTION':  'bg-orange-100 text-orange-800 border-orange-300',
+    'ITERATION':  'bg-yellow-100 text-yellow-800 border-yellow-300',
+    'EVALUATION': 'bg-green-100 text-green-800 border-green-300',
 };
 
 export default function ProjectsPage() {
@@ -224,19 +225,20 @@ export default function ProjectsPage() {
                                             )}
                                              {(user?.role === 'ADMIN' || user?.role === 'MANAGER') ? (
                                                 <select
-                                                    value={p.status || 'ACTIVE'}
+                                                    value={p.status || 'ANALYSIS'}
                                                     disabled={statusUpdating === p.id}
                                                     onChange={(e) => handleStatusUpdate(p.id, e.target.value)}
-                                                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full border-2 outline-none cursor-pointer appearance-none transition-all shadow-sm ${STATUS_STYLES[p.status] || STATUS_STYLES['ACTIVE']}`}
+                                                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full border-2 outline-none cursor-pointer appearance-none transition-all shadow-sm ${STATUS_STYLES[p.status] || STATUS_STYLES['ANALYSIS']}`}
                                                 >
-                                                    <option value="ACTIVE">ACTIVE</option>
-                                                    <option value="ON TRACK">ON TRACK</option>
-                                                    <option value="AT RISK">AT RISK</option>
-                                                    <option value="COMPLETED">COMPLETED</option>
+                                                    <option value="ANALYSIS">ANALYSIS</option>
+                                                    <option value="STRATEGY">STRATEGY</option>
+                                                    <option value="EXECUTION">EXECUTION</option>
+                                                    <option value="ITERATION">ITERATION</option>
+                                                    <option value="EVALUATION">EVALUATION</option>
                                                 </select>
                                             ) : (
-                                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border-2 shadow-sm ${STATUS_STYLES[p.status] || STATUS_STYLES['ACTIVE']}`}>
-                                                    {p.status || 'ACTIVE'}
+                                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border-2 shadow-sm ${STATUS_STYLES[p.status] || STATUS_STYLES['ANALYSIS']}`}>
+                                                    {p.status || 'ANALYSIS'}
                                                 </span>
                                             )}
                                         </div>
@@ -358,10 +360,11 @@ export default function ProjectsPage() {
                                         <select value={editForm.status}
                                             onChange={e => setEditForm({ ...editForm, status: e.target.value })}
                                             className="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                                            <option value="ACTIVE">ACTIVE</option>
-                                            <option value="ON TRACK">ON TRACK</option>
-                                            <option value="AT RISK">AT RISK</option>
-                                            <option value="COMPLETED">COMPLETED</option>
+                                            <option value="ANALYSIS">ANALYSIS</option>
+                                            <option value="STRATEGY">STRATEGY</option>
+                                            <option value="EXECUTION">EXECUTION</option>
+                                            <option value="ITERATION">ITERATION</option>
+                                            <option value="EVALUATION">EVALUATION</option>
                                         </select>
                                     </div>
                                     <div>

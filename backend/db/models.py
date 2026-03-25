@@ -88,7 +88,7 @@ class Project(Base):
     delivery_date = Column(DateTime(timezone=True), nullable=True) # Renamed from deadline potentially or added
     deadline = Column(DateTime(timezone=True), nullable=False)
     
-    status = Column(String, default="ACTIVE", nullable=False)
+    status = Column(String, default="ANALYSIS", nullable=False)
     service_category = Column(String, nullable=True) # e.g. Cinematic Car Shoot
     
     # Foundational / During
