@@ -59,10 +59,12 @@ export default function AdminDashboard() {
                 setProjects(projectsRes.data);
                 const fetchedTasks = projectsRes.data.map((p: any) => {
                     let progress = 50;
-                    let customClass = 'bar-active';
-                    if (p.status === 'COMPLETED') { progress = 100; customClass = 'bar-completed'; }
-                    else if (p.status === 'ON TRACK') { progress = 75; customClass = 'bar-ontrack'; }
-                    else if (p.status === 'AT RISK') { progress = 25; customClass = 'bar-atrisk'; }
+                    let customClass = 'bar-analysis';
+                    if (p.status === 'EVALUATION') { progress = 100; customClass = 'bar-evaluation'; }
+                    else if (p.status === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
+                    else if (p.status === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
+                    else if (p.status === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
+                    else if (p.status === 'ANALYSIS') { progress = 20; customClass = 'bar-analysis'; }
                     return {
                         id: `Project-${p.id}`,
                         name: p.name,

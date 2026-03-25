@@ -44,6 +44,7 @@ export default function ClientsPage() {
         tiktok_url: '',
         instagram_url: '',
         referral_source: 'OTHER',
+        referral_source_other: '',
         birthday: '',
         anniversary: '',
         follow_up_date: '',
@@ -123,6 +124,7 @@ export default function ClientsPage() {
             tiktok_url: client.tiktok_url || '',
             instagram_url: client.instagram_url || '',
             referral_source: client.referral_source || 'OTHER',
+            referral_source_other: client.referral_source_other || '',
             birthday: client.birthday ? client.birthday.split('T')[0] : '',
             anniversary: client.anniversary ? client.anniversary.split('T')[0] : '',
             follow_up_date: client.follow_up_date ? client.follow_up_date.split('T')[0] : '',
@@ -139,7 +141,7 @@ export default function ClientsPage() {
             business_name: '', primary_contact_name: '', primary_contact_role: '',
             phone: '', whatsapp: '', email: '', location: '',
             facebook_url: '', tiktok_url: '', instagram_url: '',
-            referral_source: 'OTHER', birthday: '', anniversary: '',
+            referral_source: 'OTHER', referral_source_other: '', birthday: '', anniversary: '',
             follow_up_date: '', upsell_potential: ''
         });
     };
@@ -213,7 +215,9 @@ export default function ClientsPage() {
                         </div>
                         
                         <div>
-                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{client.referral_source.replace(/_/g, ' ')}</span>
+                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                                {client.referral_source === 'OTHER' && client.referral_source_other ? client.referral_source_other : client.referral_source.replace(/_/g, ' ')}
+                            </span>
                             <h3 className="text-lg font-bold text-gray-900 leading-tight">{client.business_name}</h3>
                             <p className="text-sm text-gray-500 font-medium">{client.primary_contact_name} · {client.primary_contact_role}</p>
                         </div>
@@ -320,6 +324,18 @@ export default function ClientsPage() {
                                         <option value="OTHER">Other</option>
                                     </select>
                                 </div>
+                                {formData.referral_source === 'OTHER' && (
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Specify Other</label>
+                                        <input 
+                                            type="text" 
+                                            value={formData.referral_source_other} 
+                                            onChange={e => setFormData({...formData, referral_source_other: e.target.value})} 
+                                            className="w-full border border-gray-200 rounded-xl p-2.5 text-sm" 
+                                            placeholder="Where did they hear about us?" 
+                                        />
+                                    </div>
+                                )}
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-gray-500 uppercase">Next Follow-up</label>
                                     <input type="date" value={formData.follow_up_date} onChange={e => setFormData({...formData, follow_up_date: e.target.value})} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm" />

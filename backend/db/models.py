@@ -65,6 +65,7 @@ class Client(Base):
     instagram_url = Column(String, nullable=True)
     
     referral_source = Column(SQLEnum(ReferralSource), default=ReferralSource.OTHER)
+    referral_source_other = Column(String, nullable=True)
     birthday = Column(DateTime(timezone=True), nullable=True)
     anniversary = Column(DateTime(timezone=True), nullable=True)
     

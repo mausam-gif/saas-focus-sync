@@ -17,6 +17,7 @@ class ClientBase(BaseModel):
     instagram_url: Optional[str] = None
     
     referral_source: Optional[ReferralSource] = ReferralSource.OTHER
+    referral_source_other: Optional[str] = None
     birthday: Optional[datetime] = None
     anniversary: Optional[datetime] = None
     
@@ -38,6 +39,7 @@ class ClientUpdate(BaseModel):
     tiktok_url: Optional[str] = None
     instagram_url: Optional[str] = None
     referral_source: Optional[ReferralSource] = None
+    referral_source_other: Optional[str] = None
     birthday: Optional[datetime] = None
     anniversary: Optional[datetime] = None
     follow_up_date: Optional[datetime] = None

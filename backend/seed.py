@@ -36,6 +36,13 @@ def migrate_schema():
         except sqlite3.OperationalError:
             pass
 
+    # 3. Add columns to 'clients' table
+    for col_name, col_type in [("referral_source_other", "VARCHAR")]:
+        try:
+            cursor.execute(f"ALTER TABLE clients ADD COLUMN {col_name} {col_type}")
+        except sqlite3.OperationalError:
+            pass
+
     conn.commit()
     conn.close()
     print("Automated schema migration complete.")

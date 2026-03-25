@@ -27,34 +27,17 @@ body {
 }
 
 /* Gantt Chart Status Colors */
-.bar-active .bar {
-  fill: #6366f1 !important;
-}
+.bar-analysis .bar { fill: #3b82f6 !important; }
+.bar-analysis .bar-progress { fill: #2563eb !important; }
 
-.bar-ontrack .bar {
-  fill: #10b981 !important;
-}
+.bar-strategy .bar { fill: #a855f7 !important; }
+.bar-strategy .bar-progress { fill: #9333ea !important; }
 
-.bar-atrisk .bar {
-  fill: #ef4444 !important;
-}
+.bar-execution .bar { fill: #f97316 !important; }
+.bar-execution .bar-progress { fill: #ea580c !important; }
 
-.bar-completed .bar {
-  fill: #3b82f6 !important;
-}
+.bar-iteration .bar { fill: #eab308 !important; }
+.bar-iteration .bar-progress { fill: #ca8a04 !important; }
 
-.bar-active .bar-progress {
-  fill: #4f46e5 !important;
-}
-
-.bar-ontrack .bar-progress {
-  fill: #059669 !important;
-}
-
-.bar-atrisk .bar-progress {
-  fill: #dc2626 !important;
-}
-
-.bar-completed .bar-progress {
-  fill: #1d4ed8 !important;
-}
+.bar-evaluation .bar { fill: #22c55e !important; }
+.bar-evaluation .bar-progress { fill: #16a34a !important; }
