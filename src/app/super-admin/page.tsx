@@ -46,23 +46,25 @@ export default function SuperAdminDashboard() {
     const handleCreateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/super-admin/organizations', null, {
+            await api.post('/super-admin/organizations', {
+                name: newOrg.name,
+                slug: newOrg.slug,
+                subscription_expires_at: newOrg.subscription_expires_at || null
+            }, {
                 params: {
                     admin_email: newOrg.admin_email,
                     admin_password: newOrg.admin_password,
                     admin_name: newOrg.admin_name
-                },
-                data: {
-                    name: newOrg.name,
-                    slug: newOrg.slug,
-                    subscription_expires_at: newOrg.subscription_expires_at || null
                 }
             });
             setIsAddingOrg(false);
+            setNewOrg({ name: '', slug: '', admin_email: '', admin_password: '', admin_name: '', subscription_expires_at: '' });
             fetchOrganizations();
             alert("Organization created successfully!");
         } catch (err: any) {
-            alert(err.response?.data?.detail || "Failed to create organization");
+            const detail = err.response?.data?.detail;
+            const message = typeof detail === 'string' ? detail : JSON.stringify(detail) || "Failed to create organization";
+            alert(message);
         }
     };
 
