@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from db.models import UserRole, UserUnit
 
 class UserBase(BaseModel):
@@ -9,6 +9,13 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     location: Optional[str] = None
     designation: Optional[str] = None
+
+    @field_validator("unit", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == "":
+            return None
+        return v
 
 class UserCreate(UserBase):
     password: str
