@@ -34,13 +34,14 @@ export default function LoginPage() {
             const userRes = await api.get('/users/me', { headers: { Authorization: `Bearer ${token}` } });
             const role = userRes.data.role.toUpperCase();
 
-            if (role === 'ADMIN') router.push('/admin/dashboard');
+            if (role === 'SUPER_ADMIN') router.push('/super-admin');
+            else if (role === 'ADMIN') router.push('/admin/dashboard');
             else if (role === 'MANAGER') router.push('/manager/dashboard');
             else router.push('/employee/dashboard');
 
         } catch (err: any) {
             console.error(err);
-            setError('Invalid email or password');
+            setError(err.response?.data?.detail || 'Invalid email or password');
         } finally {
             setIsLoading(false);
         }
@@ -48,14 +49,17 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-sm border border-gray-100">
+            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-3xl shadow-2xl shadow-indigo-100 border border-gray-100">
                 <div>
-                    <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-                        <span className="text-white text-xl font-bold">E</span>
+                    <div className="mx-auto w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <span className="text-white text-2xl font-black">V</span>
                     </div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
-                        Sign in to E5 Chronicles
+                    <h2 className="mt-8 text-center text-3xl font-black text-gray-900 tracking-tighter uppercase">
+                        Vast Focus Sync
                     </h2>
+                    <p className="mt-2 text-center text-sm text-gray-500 font-medium">
+                        Enterprise SaaS Employee Monitoring
+                    </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmt}>
                     <div className="rounded-md shadow-sm -space-y-px">
