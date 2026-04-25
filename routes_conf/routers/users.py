@@ -34,6 +34,12 @@ def create_user(
     manager_id = user_in.manager_id
     if current_user.role == UserRole.MANAGER:
         manager_id = current_user.id
+    
+    # Enforce organization isolation
+    # Only Super Admin can specify organization_id; others default to their own
+    org_id = current_user.organization_id
+    if current_user.role == UserRole.SUPER_ADMIN and hasattr(user_in, 'organization_id'):
+         org_id = getattr(user_in, 'organization_id', None)
         
     user = User(
         email=user_in.email,
@@ -44,7 +50,8 @@ def create_user(
         phone=user_in.phone,
         location=user_in.location,
         designation=user_in.designation,
-        manager_id=manager_id
+        manager_id=manager_id,
+        organization_id=org_id
     )
     db.add(user)
     db.commit()
@@ -58,22 +65,18 @@ def read_users(
     limit: int = 100,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
-    """Retrieve users."""
-    if current_user.role == UserRole.ADMIN:
-        users = db.query(User).offset(skip).limit(limit).all()
-    elif current_user.role == UserRole.MANAGER:
-        # Managers can see everyone (as previously requested for interconnected features)
-        users = db.query(User).offset(skip).limit(limit).all()
-        # deduplicate NOT needed for this query, but in case of manual list merging:
-        seen_ids = set()
-        unique_users = []
-        for u in users:
-            if u.id not in seen_ids:
-                unique_users.append(u)
-                seen_ids.add(u.id)
-        users = unique_users
+    """Retrieve users with multi-tenant isolation."""
+    query = db.query(User)
+    
+    # Enforce isolation
+    if current_user.role != UserRole.SUPER_ADMIN:
+        query = query.filter(User.organization_id == current_user.organization_id)
+        
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER]:
+        users = query.offset(skip).limit(limit).all()
     else:
         users = [current_user]
+        
     return users
 
 @router.put("/{user_id}", response_model=UserResponse)

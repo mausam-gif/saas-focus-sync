@@ -15,15 +15,17 @@ def create_client(
     current_user: User = Depends(deps.get_current_active_manager_or_admin),
 ) -> Any:
     """
-    Create new client.
+    Create new client with multi-tenant isolation.
     """
     # Extract documents
     documents_data = client_in.documents or []
     client_data = client_in.model_dump(exclude={"documents"})
     
+    # Enforce organization isolation
     client = Client(
         **client_data,
-        created_by=current_user.id
+        created_by=current_user.id,
+        organization_id=current_user.organization_id
     )
     
     # Add documents
@@ -44,9 +46,14 @@ def read_clients(
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Retrieve clients.
+    Retrieve clients with multi-tenant isolation.
     """
-    clients = db.query(Client).offset(skip).limit(limit).all()
+    query = db.query(Client)
+    
+    if current_user.role != UserRole.SUPER_ADMIN:
+        query = query.filter(Client.organization_id == current_user.organization_id)
+        
+    clients = query.offset(skip).limit(limit).all()
     return clients
 
 @router.get("/{client_id}", response_model=ClientResponse)

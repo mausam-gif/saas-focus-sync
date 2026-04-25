@@ -21,6 +21,9 @@ def create_project(
     project_data = project_in.model_dump(exclude={"documents"})
     documents_data = project_in.documents
     
+    # Enforce organization isolation
+    project_data["organization_id"] = current_user.organization_id
+    
     project = Project(**project_data)
     db.add(project)
     db.flush() # Get project id
@@ -42,9 +45,14 @@ def read_projects(
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Retrieve projects. (In a real system we'd filter by accessible projects)
+    Retrieve projects with multi-tenant isolation.
     """
-    projects = db.query(Project).options(
+    query = db.query(Project)
+    
+    if current_user.role != UserRole.SUPER_ADMIN:
+        query = query.filter(Project.organization_id == current_user.organization_id)
+        
+    projects = query.options(
         joinedload(Project.client).joinedload(Client.documents),
         joinedload(Project.work_submissions),
         joinedload(Project.documents)
