@@ -13,6 +13,16 @@ TASK_MAPPING = {
         "STRATEGY": [
             {"title": "Visual Tone Selection", "description": "Decide if the project should be 'High-Energy/Fast' or 'Soulful/Cinematic' based on personality."},
             {"title": "Budget & Timeline Alignment", "description": "Confirm exact delivery date and ensure scope fits NPR budget."}
+        ],
+        "EXECUTION": [
+            {"title": "Resource Oversight", "description": "Check if videographers and designers have the gear/assets they need."},
+            {"title": "Client updates", "description": "Provide a mid-execution update to the client on project status."}
+        ],
+        "ITERATION": [
+            {"title": "Feedback Loop", "description": "Review the first draft and compile client/internal feedback for the team."}
+        ],
+        "EVALUATION": [
+            {"title": "Project Debrief", "description": "Conduct a post-mortem to discuss what went well and what can be improved for next project."}
         ]
     },
     "designer": {
@@ -22,6 +32,15 @@ TASK_MAPPING = {
         ],
         "STRATEGY": [
             {"title": "Mood Boarding", "description": "Create a 'Look-and-Feel' collage (colors, lighting styles, textures) for client review."}
+        ],
+        "EXECUTION": [
+            {"title": "Asset Creation", "description": "Design primary visual assets based on the approved mood board."}
+        ],
+        "ITERATION": [
+            {"title": "Design Refinement", "description": "Apply feedback from the manager to the visual designs."}
+        ],
+        "EVALUATION": [
+            {"title": "Final Asset Export", "description": "Organize and export final source files and deliverables."}
         ]
     },
     "social media manager": {
@@ -31,21 +50,52 @@ TASK_MAPPING = {
         ],
         "STRATEGY": [
             {"title": "Hook Identification", "description": "Identify 3 potential 'Hooks' that will stop the scroll for this specific target audience."}
+        ],
+        "EXECUTION": [
+            {"title": "Content Distribution Plan", "description": "Draft the posting schedule and caption styles for the campaign."}
+        ],
+        "ITERATION": [
+            {"title": "Engagement Tuning", "description": "Adjust hooks or captions based on early team feedback or test results."}
+        ],
+        "EVALUATION": [
+            {"title": "Performance Report", "description": "Prepare a summary of projected reach and engagement based on content quality."}
         ]
     },
     "editor": {
+        "ANALYSIS": [
+            {"title": "Technical Audit", "description": "Review raw footage requirements and ensure hardware/software readiness."}
+        ],
         "STRATEGY": [
             {"title": "Style Matching", "description": "Watch client's favorite 'Reference Videos' and determine technical difficulty (e.g., 3D tracking)."},
             {"title": "Storage Estimation", "description": "Calculate data generation (e.g., 3 hours 4K = 200GB). Ensure SSDs are ready."}
+        ],
+        "EXECUTION": [
+            {"title": "Rough Cut Assembly", "description": "Complete the first assembly of the project including sync and basic cuts."}
+        ],
+        "ITERATION": [
+            {"title": "Color/Audio Polish", "description": "Finalize color grading and sound design after cut approval."}
+        ],
+        "EVALUATION": [
+            {"title": "Master Render", "description": "Perform high-quality master render and upload to delivery folder."}
         ]
     },
     "videographer": {
+        "ANALYSIS": [
+            {"title": "Equipment Inventory", "description": "Check if gimble, devices and lenses are charged clean and ready."}
+        ],
         "STRATEGY": [
             {"title": "Site Survey", "description": "Check shooting location for power outlets and lighting conditions."},
             {"title": "Gear Requirement Check", "description": "Confirm if movement stabilizers (Flow 2 Pro) or tripods are needed."}
         ],
         "EXECUTION": [
-            {"title": "Logistics Planning", "description": "Estimate travel time and secure any permits needed for drone/camera use."}
+            {"title": "Logistics Planning", "description": "Estimate travel time and secure any permits needed for drone/camera use."},
+            {"title": "Primary Filming", "description": "Capture the primary footage according to the director's vision."}
+        ],
+        "ITERATION": [
+            {"title": "B-Roll Pickups", "description": "Identify and capture any missing transition shots or b-roll."}
+        ],
+        "EVALUATION": [
+            {"title": "DIT & Backup", "description": "Ensure all footage is safely offloaded and backed up in 3-2-1 system."}
         ]
     },
     "scriptwriter": {
@@ -57,6 +107,12 @@ TASK_MAPPING = {
         ],
         "EXECUTION": [
             {"title": "Final Script Handover", "description": "Polishing and delivering the final approved script for production."}
+        ],
+        "ITERATION": [
+            {"title": "Script Tweaks", "description": "Adjust dialogue based on actor/director feedback during production."}
+        ],
+        "EVALUATION": [
+            {"title": "Script Archive", "description": "Update the script to its 'As-Released' version for documentation."}
         ]
     }
 }

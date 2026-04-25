@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from api import deps
+from datetime import datetime, timezone, timedelta
 from db.models import (
     KPIForm, KPIQuestion, KPIFormAssignment, KPIResponse, KPIScore,
-    User, UserRole
+    User, UserRole, Task, KPIMetric, Project, WorkSubmission, TaskStatus
 )
 from schemas.kpi_forms import (
     KPIFormCreate, KPIFormResponse, AssignFormRequest, KPIAssignmentResponse,
@@ -49,6 +50,110 @@ def calculate_kpi_score(responses: list, questions: list) -> float:
             score += normalized * (question.weight / total_weight)
 
     return round(min(max(score, 0), 100), 2)
+
+def sync_kpi_scores(db: Session, employee_id: int) -> float:
+    """Recalculate total KPI score combining Forms (40%), Tasks (40%), and Projects (20%)."""
+    # Use naive local time to match the naive timestamps stored by datetime-local inputs
+    now = datetime.now()
+    
+    # Comparison safety for naive/aware datetimes (Standardize to naive for local comparison)
+    def safe_compare_gt(dt1, dt2):
+        if not dt1 or not dt2: return False
+        d1 = dt1.replace(tzinfo=None) if hasattr(dt1, "tzinfo") else dt1
+        d2 = dt2.replace(tzinfo=None) if hasattr(dt2, "tzinfo") else dt2
+        res = d1 > d2
+        if not res: # Only print if it fails our expectation (optional)
+             pass
+        return res
+
+    def safe_compare_lt(dt1, dt2):
+        if not dt1 or not dt2: return False
+        d1 = dt1.replace(tzinfo=None) if hasattr(dt1, "tzinfo") else dt1
+        d2 = dt2.replace(tzinfo=None) if hasattr(dt2, "tzinfo") else dt2
+        return d1 < d2
+
+    # 1. Form Score (40% weight)
+    form_scores = db.query(KPIScore).filter(KPIScore.employee_id == employee_id).all()
+    avg_form_score = sum(s.score for s in form_scores) / len(form_scores) if form_scores else 100.0
+    
+    # 2. Task Performance (40% weight)
+    tasks = db.query(Task).filter(Task.assigned_user == employee_id).all()
+    task_score = 100.0
+    completion_rate = 100.0
+    if tasks:
+        # Rolling window for recovery (30 days)
+        cutoff_date = now - timedelta(days=30)
+
+        completed = [t for t in tasks if t.status == TaskStatus.DONE]
+        # Only penalize late tasks completed in the last 30 days
+        late_completed_recent = [t for t in tasks if t.status == TaskStatus.DONE and safe_compare_gt(t.completed_at, t.due_date) and safe_compare_gt(t.completed_at, cutoff_date)]
+        # All currently overdue pending tasks count
+        overdue_pending = [t for t in tasks if t.status != TaskStatus.DONE and safe_compare_lt(t.due_date, now)]
+        
+        # Absolute Deduction Model (Rolling):
+        # -10 for each current overdue pending task (Huge decrement)
+        # -8 for each late completed task in last 30 days (Very small recovery: +2 increment)
+        deductions = (len(overdue_pending) * 10) + (len(late_completed_recent) * 8)
+        task_score = max(0, 100.0 - deductions)
+        completion_rate = (len(completed) / len(tasks)) * 100 if tasks else 100
+
+    # 3. Project Submission Performance (20% weight)
+    project_ids = db.query(Task.project_id).filter(Task.assigned_user == employee_id, Task.project_id != None).distinct().all()
+    project_ids = [p[0] for p in project_ids]
+    project_score = 100.0
+    
+    if project_ids:
+        project_deductions = 0
+        cutoff_date = now - timedelta(days=30)
+        for pid in project_ids:
+            project = db.query(Project).filter(Project.id == pid).first()
+            if not project: continue
+            
+            submission = db.query(WorkSubmission).filter(
+                WorkSubmission.employee_id == employee_id,
+                WorkSubmission.project_id == pid
+            ).order_by(WorkSubmission.timestamp.desc()).first()
+            
+            if not submission:
+                if safe_compare_lt(project.deadline, now):
+                    project_deductions += 15 # Huge penalty for missing submission
+            else:
+                # Only penalize late submissions if they were in the last 30 days
+                if safe_compare_gt(submission.timestamp, project.deadline):
+                    if safe_compare_gt(submission.timestamp, cutoff_date):
+                        project_deductions += 13 # Very small recovery: +2 increment (from -15)
+        
+        project_score = max(0, 100.0 - project_deductions)
+
+    # 4. Final Weighted Total (60% Task, 20% Project, 20% Form)
+    total_score = (task_score * 0.6) + (project_score * 0.2) + (avg_form_score * 0.2)
+    total_score = round(total_score, 1)
+    
+    # Update KPIMetric table
+    metric = db.query(KPIMetric).filter(KPIMetric.employee_id == employee_id).first()
+    if not metric:
+        metric = KPIMetric(employee_id=employee_id)
+        db.add(metric)
+    
+    metric.productivity_score = total_score
+    metric.task_completion_rate = round(completion_rate, 1)
+    metric.efficiency_score = round(task_score, 1) # Legacy mapping or custom index
+    metric.task_score = round(task_score, 1)
+    metric.project_score = round(project_score, 1)
+    metric.form_score = round(avg_form_score, 1)
+    
+    db.commit()
+    return total_score
+def sync_all_kpis(db: Session):
+    """Recalculate KPI for all employees in the company."""
+    users = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+    for user in users:
+        try:
+            sync_kpi_scores(db, user.id)
+        except Exception as e:
+            print(f"Error syncing KPI for user {user.id}: {e}")
+    db.commit()
+    return True
 
 
 # ─── Create Form ──────────────────────────────────────────────────────────────
@@ -325,6 +430,12 @@ def submit_form(
     assignment.submitted_at = datetime.now(timezone.utc)
 
     db.commit()
+    
+    # Recalculate total KPI for the employee
+    try:
+        sync_kpi_scores(db, current_user.id)
+    except Exception as e:
+        print(f"Error syncing KPI for user {current_user.id}: {e}")
 
     return {"message": "Form submitted successfully", "your_score": score_value}
 
@@ -425,3 +536,27 @@ def get_my_scores(
             "form_title": form.title if form else "Unknown"
         })
     return result
+
+@router.post("/reset-kpi")
+def reset_kpi(
+    *,
+    db: Session = Depends(deps.get_db),
+    employee_id: Optional[int] = None,
+    current_user: User = Depends(deps.get_current_active_admin),
+) -> Any:
+    """Reset KPI scores and metrics for an individual or the entire company. Admin only."""
+    from db.models import KPIScore, KPIMetric
+    if employee_id:
+        db.query(KPIScore).filter(KPIScore.employee_id == employee_id).delete()
+        db.query(KPIMetric).filter(KPIMetric.employee_id == employee_id).delete()
+        db.commit()
+        sync_kpi_scores(db, employee_id)
+        message = f"KPI reset and recalculated for employee {employee_id}"
+    else:
+        db.query(KPIScore).delete()
+        db.query(KPIMetric).delete()
+        db.commit()
+        sync_all_kpis(db)
+        message = "KPI reset and recalculated for all individuals and the company"
+    
+    return {"message": message}

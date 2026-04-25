@@ -56,6 +56,39 @@ def migrate_schema():
         )
     """)
 
+    # Migration: add 'last_group_read_at' to users
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN last_group_read_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+
+    # 5. Create 'chat_messages' table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            recipient_id INTEGER,
+            message TEXT,
+            attachment_url VARCHAR,
+            attachment_type VARCHAR,
+            is_edited BOOLEAN DEFAULT 0,
+            edited_at DATETIME,
+            is_deleted BOOLEAN DEFAULT 0,
+            is_read BOOLEAN DEFAULT 0,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (recipient_id) REFERENCES users (id)
+        )
+    """)
+    # Migration for existing table - add columns one by one in SQLite
+    for col, col_type in [("recipient_id", "INTEGER"), ("is_edited", "BOOLEAN DEFAULT 0"), 
+                         ("edited_at", "DATETIME"), ("is_deleted", "BOOLEAN DEFAULT 0"),
+                         ("is_read", "BOOLEAN DEFAULT 0")]:
+        try:
+            cursor.execute(f"ALTER TABLE chat_messages ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError:
+            pass # already exists
+
     conn.commit()
     conn.close()
     print("Automated schema migration complete.")

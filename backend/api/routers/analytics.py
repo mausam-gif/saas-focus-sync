@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -8,9 +8,13 @@ from pydantic import BaseModel
 
 class KPIMetricResponse(BaseModel):
     employee_id: int
+    employee_name: Optional[str] = None
     productivity_score: float
     task_completion_rate: float
     efficiency_score: float
+    task_score: float = 0.0
+    project_score: float = 0.0
+    form_score: float = 0.0
 
     model_config = {"from_attributes": True}
 
@@ -28,12 +32,26 @@ def read_kpi_metrics(
     Retrieve KPI metrics.
     """
     if current_user.role == UserRole.ADMIN:
-        metrics = db.query(KPIMetric).offset(skip).limit(limit).all()
+        metrics = db.query(KPIMetric).all()
     elif current_user.role == UserRole.MANAGER:
-        metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(User.manager_id == current_user.id).offset(skip).limit(limit).all()
+        metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(User.manager_id == current_user.id).all()
     else:
-        metrics = db.query(KPIMetric).filter(KPIMetric.employee_id == current_user.id).offset(skip).limit(limit).all()
-    return metrics
+        metrics = db.query(KPIMetric).filter(KPIMetric.employee_id == current_user.id).all()
+        
+    result = []
+    for m in metrics:
+        emp = db.query(User).filter(User.id == m.employee_id).first()
+        result.append({
+            "employee_id": m.employee_id,
+            "employee_name": emp.name if emp else "Unknown",
+            "productivity_score": m.productivity_score,
+            "task_completion_rate": m.task_completion_rate,
+            "efficiency_score": m.efficiency_score,
+            "task_score": m.task_score,
+            "project_score": m.project_score,
+            "form_score": m.form_score
+        })
+    return result
 
 @router.get("/company-kpi")
 def get_company_kpi(
@@ -66,30 +84,20 @@ def calculate_kpi(
     """
     Calculate KPIs for an employee based on tasks and questions.
     """
-    # Simply count completed tasks / total tasks
-    total_tasks = db.query(func.count(Task.id)).filter(Task.assigned_user == employee_id).scalar()
-    completed_tasks = db.query(func.count(Task.id)).filter(Task.assigned_user == employee_id, Task.status == TaskStatus.DONE).scalar()
+    from api.routers.kpi_forms import sync_kpi_scores
+    total_score = sync_kpi_scores(db, employee_id)
     
-    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
-    
-    # Mocking productivity and efficiency based on completion rate
-    productivity_score = completion_rate * 0.9 
-    efficiency_score = completion_rate * 0.85
-
     metric = db.query(KPIMetric).filter(KPIMetric.employee_id == employee_id).first()
-    if not metric:
-        metric = KPIMetric(
-            employee_id=employee_id,
-            productivity_score=productivity_score,
-            task_completion_rate=completion_rate,
-            efficiency_score=efficiency_score
-        )
-        db.add(metric)
-    else:
-        metric.productivity_score = productivity_score
-        metric.task_completion_rate = completion_rate
-        metric.efficiency_score = efficiency_score
-    
-    db.commit()
-    db.refresh(metric)
     return {"message": "Metrics calculated successfully", "data": metric}
+
+@router.post("/calculate/all")
+def calculate_all_kpis(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_admin),
+) -> Any:
+    """
+    Recalculate KPIs for all employees. Admin only.
+    """
+    from api.routers.kpi_forms import sync_all_kpis
+    sync_all_kpis(db)
+    return {"message": "All metrics calculated successfully"}

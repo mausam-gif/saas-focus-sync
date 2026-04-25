@@ -41,3 +41,13 @@ class Token(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
+
+class UserStatusResponse(BaseModel):
+    unread_chat_count: int
+    has_group_unread: bool
+    pending_tasks_count: int
+    active_projects_count: int
+    own_kpi: float
+    company_kpi_avg: Optional[float] = None
+    is_kpi_red: bool
+    is_company_kpi_red: bool

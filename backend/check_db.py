@@ -1,15 +1,16 @@
-import sqlite3
+from db.session import SessionLocal
+from db.models import User
+from core.config import settings
 
-conn = sqlite3.connect('employee_monitoring.db')
-cursor = conn.cursor()
+print(f"Connecting to: {settings.SQLALCHEMY_DATABASE_URI}")
 
+db = SessionLocal()
 try:
-    cursor.execute("SELECT id, email, role FROM users")
-    rows = cursor.fetchall()
-    print("Users in DB:")
-    for row in rows:
-        print(row)
+    users = db.query(User).all()
+    print(f"Successfully connected! Found {len(users)} users:")
+    for user in users:
+        print(f"- {user.email} ({user.role.value})")
 except Exception as e:
-    print("Error:", e)
-
-conn.close()
+    print("Error connecting to database:", e)
+finally:
+    db.close()

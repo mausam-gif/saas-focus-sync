@@ -1,8 +1,8 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from api import deps
-from db.models import Project, User, UserRole
+from db.models import Project, User, UserRole, Client, ProjectDocument
 from schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from api.utils.automation import trigger_project_automation
 
@@ -18,8 +18,17 @@ def create_project(
     """
     Create new project. Only Admin can create projects.
     """
-    project = Project(**project_in.model_dump())
+    project_data = project_in.model_dump(exclude={"documents"})
+    documents_data = project_in.documents
+    
+    project = Project(**project_data)
     db.add(project)
+    db.flush() # Get project id
+
+    for doc_in in documents_data:
+        db_doc = ProjectDocument(**doc_in.model_dump(), project_id=project.id)
+        db.add(db_doc)
+
     db.commit()
     db.refresh(project)
     trigger_project_automation(db, project, is_new=True)
@@ -35,7 +44,11 @@ def read_projects(
     """
     Retrieve projects. (In a real system we'd filter by accessible projects)
     """
-    projects = db.query(Project).offset(skip).limit(limit).all()
+    projects = db.query(Project).options(
+        joinedload(Project.client).joinedload(Client.documents),
+        joinedload(Project.work_submissions),
+        joinedload(Project.documents)
+    ).offset(skip).limit(limit).all()
     return projects
 
 @router.put("/{project_id}", response_model=ProjectResponse)
@@ -53,7 +66,8 @@ def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    update_data = project_in.model_dump(exclude_unset=True)
+    update_data = project_in.model_dump(exclude_unset=True, exclude={"documents"})
+    documents_data = project_in.documents
     
     # Restrict Managers to status and project metadata/specs
     if current_user.role == UserRole.MANAGER:
@@ -61,14 +75,23 @@ def update_project(
             "status", "shooting_date", "delivery_date", "service_category",
             "client_value_proposition", "total_budget", "current_spend", 
             "resource_allocation", "problem_solved", "shooting_fee", 
-            "editing_fee", "the_hook"
+            "editing_fee", "the_hook", "logo_url"
         ]
         update_data = {k: v for k, v in update_data.items() if k in allowed_keys}
-        if not update_data:
-            raise HTTPException(status_code=400, detail="Managers can only update project metadata and status.")
-
+    
     for field, value in update_data.items():
-        setattr(project, field, value)
+        if field == "logo_url" and (value == "" or value is None):
+            setattr(project, field, None)
+        else:
+            setattr(project, field, value)
+    
+    if documents_data is not None:
+        # For simplicity, we'll append new documents. 
+        # In a real app we might want to reconcile (delete old etc.)
+        for doc_in in documents_data:
+            db_doc = ProjectDocument(**doc_in.model_dump(), project_id=project.id)
+            db.add(db_doc)
+
     db.add(project)
     db.commit()
     db.refresh(project)

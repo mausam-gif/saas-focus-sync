@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -6,7 +7,7 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 from core.config import settings
 from db.session import SessionLocal
-from db.models import User, UserRole
+from db.models import User, UserRole, Organization
 
 class TokenPayload(BaseModel):
     sub: str | None = None
@@ -38,6 +39,19 @@ def get_current_user(
     user = db.query(User).filter(User.id == token_data.sub).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check Organization status if not Super Admin
+    if user.role != UserRole.SUPER_ADMIN:
+        if not user.organization_id:
+            raise HTTPException(status_code=403, detail="User not assigned to an organization")
+        
+        org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+        if not org or not org.is_active:
+            raise HTTPException(status_code=403, detail="Organization is inactive or subscription expired")
+        
+        if org.subscription_expires_at and org.subscription_expires_at < datetime.now():
+            raise HTTPException(status_code=403, detail="Organization subscription has expired")
+
     return user
 
 def get_current_active_user(
@@ -45,10 +59,19 @@ def get_current_active_user(
 ) -> User:
     return current_user
 
+def get_current_active_super_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin privileges required"
+        )
+    return current_user
+
 def get_current_active_admin(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges"
         )
@@ -57,7 +80,7 @@ def get_current_active_admin(
 def get_current_active_manager_or_admin(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    if current_user.role not in [UserRole.MANAGER, UserRole.ADMIN]:
+    if current_user.role not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges"
         )

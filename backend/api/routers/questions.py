@@ -5,7 +5,6 @@ from api import deps
 from db.models import Question, Response, User, UserRole, Task
 from schemas.question import QuestionCreate, QuestionResponse, ResponseCreate, ResponseResponse
 import os
-import google.generativeai as genai
 
 router = APIRouter()
 
@@ -118,37 +117,3 @@ def create_response(
     # Automatically recalculate KPI metrics here if needed
     return response
 
-@router.post("/generate/{employee_id}")
-def generate_question(
-    employee_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_manager_or_admin),
-) -> Any:
-    """
-    Generate a check-in question using Gemini API based on employee's recent activity.
-    """
-    # Fetch employee context
-    tasks = db.query(Task).filter(Task.assigned_user == employee_id).all()
-    
-    task_context = "No tasks assigned."
-    if tasks:
-        task_context = f"The employee has {len(tasks)} tasks: " + ", ".join([f"id {t.id} ({t.status.value})" for t in tasks])
-    
-    if not os.getenv("GEMINI_API_KEY"):
-        # Fallback if no key is set
-        return {"question_text": f"MOCK AI: I see you have some tasks. {task_context} What blockers are you facing today?"}
-        
-    try:
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        prompt = f"""
-        You are an AI assistant helping a manager create a personalized, 1-2 sentence check-in question for an employee.
-        Employee context: {task_context}.
-        Generate a thoughtful, constructive question that asks about their progress, blockers, or KPIs.
-        Return ONLY the question text.
-        """
-        response = model.generate_content(prompt)
-        return {"question_text": response.text.replace('"', '').strip()}
-    except Exception as e:
-        return {"question_text": f"Error generating question: {str(e)}"}

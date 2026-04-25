@@ -21,6 +21,7 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
     progress: Optional[int] = None
     assigned_user: Optional[int] = None
+    completion_notes: Optional[str] = None
 
 class TaskResponse(BaseModel):
     id: int
@@ -32,9 +33,14 @@ class TaskResponse(BaseModel):
     due_date: Optional[datetime] = None
     status: TaskStatus
     progress: int
+    completed_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    completion_notes: Optional[str] = None
+    created_at: Optional[datetime] = None
     # Enriched fields
     assigned_user_name: Optional[str] = None
     assigned_by_name: Optional[str] = None
     project_name: Optional[str] = None
+    client_name: Optional[str] = None
 
     model_config = {"from_attributes": True}

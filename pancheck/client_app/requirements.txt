@@ -1,0 +1,8 @@
+selenium
+webdriver-manager
+pandas
+openpyxl
+customtkinter
+cryptography
+requests
+pillow

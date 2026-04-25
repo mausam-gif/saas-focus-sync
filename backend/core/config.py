@@ -5,8 +5,25 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Employee Monitoring API"
     API_V1_STR: str = "/api/v1"
     
-    # DATABASE (Using SQLite for local development)
-    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./employee_monitoring.db"
+    # DATABASE
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        if self.DATABASE_URL:
+            # SQLAlchemy 1.4+ needs postgresql:// instead of postgres://
+            if self.DATABASE_URL.startswith("postgres://"):
+                return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+            return self.DATABASE_URL
+        
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        db_path = os.path.join(base_dir, "employee_monitoring.db")
+        return f"sqlite:///{db_path}"
+
+    # Supabase Storage
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+    SUPABASE_BUCKET: str = os.getenv("SUPABASE_BUCKET", "uploads")
 
     # JWT Authentication
     SECRET_KEY: str = os.getenv("SECRET_KEY", "super_secret_key_change_in_production")

@@ -1,9 +1,11 @@
-from typing import Any, List
+from typing import Any, List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from api import deps
-from db.models import User, UserRole
-from schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChange
+from db.models import User, UserRole, Task, Project, ChatMessage, KPIMetric, TaskStatus
+from schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChange, UserStatusResponse
 from core.security import get_password_hash, verify_password
 
 router = APIRouter()
@@ -41,6 +43,7 @@ def create_user(
         unit=user_in.unit,
         phone=user_in.phone,
         location=user_in.location,
+        designation=user_in.designation,
         manager_id=manager_id
     )
     db.add(user)
@@ -141,6 +144,67 @@ def read_user_me(
     Get current user.
     """
     return current_user
+
+@router.get("/me/status", response_model=UserStatusResponse)
+def get_user_status(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Aggregate all unread, pending, and KPI status data for real-time notifications.
+    """
+    # 1. Chat Unread
+    unread_chats = db.query(ChatMessage).filter(
+        ChatMessage.recipient_id == current_user.id,
+        ChatMessage.is_read == False,
+        ChatMessage.is_deleted == False
+    ).count()
+
+    latest_group = db.query(ChatMessage).filter(ChatMessage.recipient_id == None).order_by(ChatMessage.timestamp.desc()).first()
+    has_group_unread = False
+    if latest_group and latest_group.user_id != current_user.id:
+        last_read = current_user.last_group_read_at or datetime.min
+        if latest_group.timestamp > last_read:
+            has_group_unread = True
+
+    # 2. Pending Tasks
+    pending_tasks = db.query(Task).filter(
+        Task.assigned_user == current_user.id,
+        Task.status != "DONE"
+    ).count()
+
+    # 3. Active Projects
+    active_projects = db.query(Project).filter(Project.status != "COMPLETED").count()
+
+    # 4. KPI Score (Average of primary metrics)
+    kpi_metric = db.query(KPIMetric).filter(KPIMetric.employee_id == current_user.id).first()
+    if kpi_metric:
+        own_score = (kpi_metric.productivity_score + kpi_metric.task_completion_rate + kpi_metric.efficiency_score) / 3.0
+    else:
+        own_score = 0.0
+
+    # 5. Company KPI (for privileged)
+    company_avg = None
+    is_company_red = False
+    if current_user.role in [UserRole.ADMIN, UserRole.MANAGER]:
+        metrics = db.query(KPIMetric).all()
+        if metrics:
+            avg_val = sum((m.productivity_score + m.task_completion_rate + m.efficiency_score) / 3.0 for m in metrics) / len(metrics)
+            company_avg = float(avg_val)
+            is_company_red = company_avg < 50.0
+        else:
+            company_avg = 0.0
+
+    return {
+        "unread_chat_count": unread_chats,
+        "has_group_unread": has_group_unread,
+        "pending_tasks_count": pending_tasks,
+        "active_projects_count": active_projects,
+        "own_kpi": own_score,
+        "company_kpi_avg": company_avg,
+        "is_kpi_red": own_score < 50.0,
+        "is_company_kpi_red": is_company_red
+    }
 
 @router.put("/me/password")
 def change_password(

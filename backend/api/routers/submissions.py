@@ -26,6 +26,14 @@ def create_submission(
     db.add(submission)
     db.commit()
     db.refresh(submission)
+    
+    # Recalculate KPI for the employee
+    try:
+        from api.routers.kpi_forms import sync_kpi_scores
+        sync_kpi_scores(db, current_user.id)
+    except Exception as e:
+        print(f"Error syncing KPI for user {current_user.id}: {e}")
+        
     return submission
 
 @router.get("/", response_model=List[WorkSubmissionResponse])

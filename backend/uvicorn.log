@@ -8424,3 +8424,5 @@ FROM (SELECT kpi_form_assignments.id AS kpi_form_assignments_id, kpi_form_assign
 FROM kpi_form_assignments) AS anon_1]
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
 INFO:     127.0.0.1:64036 - "GET /api/v1/users/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64367 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64367 - "GET /favicon.ico HTTP/1.1" 404 Not Found
