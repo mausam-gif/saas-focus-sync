@@ -9,7 +9,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["frappe-gantt"],
-  turbopack: {},
 };
 
 export default withPWA(nextConfig);
