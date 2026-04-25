@@ -8,7 +8,7 @@ from routes_conf.utils.automation import trigger_project_automation
 
 router = APIRouter()
 
-@router.post("/", response_model=ProjectResponse)
+@router.post("", response_model=ProjectResponse)
 def create_project(
     *,
     db: Session = Depends(deps.get_db),
@@ -37,7 +37,7 @@ def create_project(
     trigger_project_automation(db, project, is_new=True)
     return project
 
-@router.get("/", response_model=List[ProjectResponse])
+@router.get("", response_model=List[ProjectResponse])
 def read_projects(
     db: Session = Depends(deps.get_db),
     skip: int = 0,

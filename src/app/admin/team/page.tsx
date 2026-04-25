@@ -49,7 +49,7 @@ export default function TeamPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get('/users/');
+            const res = await api.get('/users');
             setUsers(res.data);
         } catch (error) {
             console.error("Failed to fetch users", error);
@@ -92,7 +92,7 @@ export default function TeamPage() {
         e.preventDefault();
         setSubmitStatus({ loading: true, error: '', success: '' });
         try {
-            await api.post('/users/', formData);
+            await api.post('/users', formData);
             setSubmitStatus({ loading: false, error: '', success: 'User created successfully!' });
             resetForm();
             fetchUsers();

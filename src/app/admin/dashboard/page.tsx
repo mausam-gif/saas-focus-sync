@@ -55,7 +55,7 @@ export default function AdminDashboard() {
         if (!user) return;
         try {
             // Fetch Projects for Gantt Chart
-            const projectsRes = await api.get('/projects/');
+            const projectsRes = await api.get('/projects');
             setProjects(projectsRes.data);
             const fetchedTasks = projectsRes.data.map((p: any) => {
                 let progress = 20;
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
             setTasks(fetchedTasks);
 
             // Fetch Users for Stats and team lists
-            const usersRes = await api.get('/users/');
+            const usersRes = await api.get('/users');
             const allEmployees = usersRes.data.filter((u: any) => u.role.toUpperCase() === 'EMPLOYEE');
             const allManagers = usersRes.data.filter((u: any) => u.role.toUpperCase() === 'MANAGER');
             setManagers(allManagers);
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
 
             // Load already-assigned tasks
             try {
-                const tasksAssigned = await api.get('/tasks/');
+                const tasksAssigned = await api.get('/tasks');
                 setSentTasks(tasksAssigned.data);
             } catch (err) {
                 console.error("Tasks load failed", err);
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
 
             // Fetch Unified KPI Metrics (Tasks + Projects + Forms)
             try {
-                const metricsRes = await api.get('/analytics/');
+                const metricsRes = await api.get('/analytics');
                 setKpiMetrics(metricsRes.data);
             } catch (err) {
                 console.error("Unified metrics load failed", err);
@@ -105,11 +105,11 @@ export default function AdminDashboard() {
 
             // Fetch KPI Forms Analytics (Legacy/Form-specific)
             try {
-                const kpiRes = await api.get('/kpi-forms/analytics/overview');
+                const kpiRes = await api.get('/kpi-forms/analyticsoverview');
                 setKpiAnalytics(kpiRes.data);
                 
                 // Get company average from analytics if available
-                const compKpiRes = await api.get('/analytics/company-kpi');
+                const compKpiRes = await api.get('/analyticscompany-kpi');
                 setStats({
                     employees: allEmployees.length,
                     projects: projectsRes.data.length,
@@ -120,11 +120,11 @@ export default function AdminDashboard() {
             }
 
             // Fetch Questions
-            const questionsRes = await api.get('/questions/');
+            const questionsRes = await api.get('/questions');
             setQuestions(questionsRes.data);
 
             // Fetch Clients for filtering
-            const clientsRes = await api.get('/clients/');
+            const clientsRes = await api.get('/clients');
             setClients(clientsRes.data);
 
         } catch (error) {
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
 
     const handleSyncAllKPIs = async () => {
         try {
-            await api.post('/analytics/calculate/all');
+            await api.post('/analyticscalculate/all');
             alert('All KPIs have been recalculated and synchronized.');
             loadData();
         } catch (err: any) {
@@ -171,7 +171,7 @@ export default function AdminDashboard() {
         if (!taskAssignTo) return alert('Please select who to assign the task to.');
         setIsSendingTask(true);
         try {
-            await api.post('/tasks/', {
+            await api.post('/tasks', {
                 title: taskTitle,
                 description: taskDesc || null,
                 assigned_user: parseInt(taskAssignTo),
@@ -195,7 +195,7 @@ export default function AdminDashboard() {
     const handleEditTaskSave = async (taskId: number) => {
         setIsSavingTaskEdit(true);
         try {
-            await api.put(`/tasks/${taskId}`, {
+            await api.put(`/tasks${taskId}`, {
                 title: editTaskForm.title || undefined,
                 status: editTaskForm.status || undefined,
             });
@@ -209,10 +209,10 @@ export default function AdminDashboard() {
     const handleDeleteTask = async (taskId: number) => {
         if (!window.confirm('Are you sure you want to clear this task? This will also update the employee\'s KPI.')) return;
         try {
-            await api.delete(`/tasks/${taskId}`);
+            await api.delete(`/tasks${taskId}`);
             loadData();
             // Trigger extra KPI sync for immediate visual feedback
-            await api.post('/analytics/calculate/all');
+            await api.post('/analyticscalculate/all');
         } catch (err: any) {
             alert('Failed: ' + (err.response?.data?.detail || err.message));
         }
@@ -226,10 +226,10 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             for (const task of completedTasks) {
-                await api.delete(`/tasks/${task.id}`);
+                await api.delete(`/tasks${task.id}`);
             }
             loadData();
-            await api.post('/analytics/calculate/all');
+            await api.post('/analyticscalculate/all');
             alert('Completed tasks cleared successfully.');
         } catch (err: any) {
             alert('Failed to clear some tasks: ' + err.message);
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
             if (selectedProjectId) {
                 params.project_id = selectedProjectId;
             }
-            const response = await api.get('/tasks/export/excel', {
+            const response = await api.get('/tasksexport/excel', {
                 params,
                 responseType: 'blob',
             });
