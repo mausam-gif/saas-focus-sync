@@ -1,8 +1,5 @@
 """
 Vercel Python Serverless Entry Point for FastAPI.
-
-This file MUST have 'app' defined at module level (not just imported)
-so that Vercel's Python runtime can detect it via static analysis.
 """
 import sys
 import os
@@ -30,16 +27,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount all routes from our main app
+# Mount all routes - NO database connection at startup (lazy connection)
 from routes_conf import api_router
 from core.config import settings
-from db.session import engine
-from db.models import Base
-
-Base.metadata.create_all(bind=engine)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
-    return {"message": "Vast Focus Sync API - ONLINE"}
+    return {"message": "Vast Focus Sync API - ONLINE", "status": "ok"}
