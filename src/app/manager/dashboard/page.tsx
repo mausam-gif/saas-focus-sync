@@ -93,39 +93,6 @@ export default function ManagerDashboard() {
     }, [user, authLoading, router]);
 
 
-    const handleSendQuestion = async () => {
-        if (!selectedEmployee) return alert("Please select an employee.");
-        if (!questionText && !attachment) return alert("Please write a message or attach a file.");
-        setIsSending(true);
-        try {
-            let attachmentUrl: string | null = null;
-            let attachmentType: string | null = null;
-            if (attachment) {
-                const formData = new FormData();
-                formData.append('file', attachment);
-                const uploadRes = await api.post('/upload/', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-                attachmentUrl = uploadRes.data.url;
-                attachmentType = uploadRes.data.type;
-            }
-            await api.post('/questions/', {
-                target_employee: parseInt(selectedEmployee),
-                question_text: questionText || null,
-                attachment_url: attachmentUrl,
-                attachment_type: attachmentType,
-            });
-            setQuestionText("");
-            setAttachment(null);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            const res = await api.get('/questions/');
-            setQuestions(res.data);
-        } catch (err: any) {
-            alert('Failed to send: ' + (err.response?.data?.detail || err.message));
-        } finally {
-            setIsSending(false);
-        }
-    };
 
     if (authLoading || !user) return null;
 
