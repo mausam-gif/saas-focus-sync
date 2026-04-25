@@ -7,7 +7,7 @@ from schemas.client import ClientCreate, ClientUpdate, ClientResponse
 
 router = APIRouter()
 
-@router.post("", response_model=ClientResponse)
+@router.post("/", response_model=ClientResponse)
 def create_client(
     *,
     db: Session = Depends(deps.get_db),
@@ -38,7 +38,7 @@ def create_client(
     db.refresh(client)
     return client
 
-@router.get("", response_model=List[ClientResponse])
+@router.get("/", response_model=List[ClientResponse])
 def read_clients(
     db: Session = Depends(deps.get_db),
     skip: int = 0,

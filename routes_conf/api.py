@@ -4,7 +4,7 @@ from routes_conf.routers import (
     analytics, auth, kpi_forms, upload, clients, notes, chat, super_admin
 )
 
-api_router = APIRouter(redirect_slashes=False)
+api_router = APIRouter()
 api_router.include_router(auth.router, tags=["login"])
 api_router.include_router(super_admin.router, prefix="/super-admin", tags=["super-admin"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])

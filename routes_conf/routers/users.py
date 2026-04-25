@@ -10,7 +10,7 @@ from core.security import get_password_hash, verify_password
 
 router = APIRouter()
 
-@router.post("", response_model=UserResponse)
+@router.post("/", response_model=UserResponse)
 def create_user(
     *,
     db: Session = Depends(deps.get_db),
@@ -58,7 +58,7 @@ def create_user(
     db.refresh(user)
     return user
 
-@router.get("", response_model=List[UserResponse])
+@router.get("/", response_model=List[UserResponse])
 def read_users(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
