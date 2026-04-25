@@ -22,11 +22,11 @@ export default function FeedbackPage() {
         const fetchFeedback = async () => {
             try {
                 // Fetch questions to get context, then responses
-                const questionsRes = await api.get('/questions/');
+                const questionsRes = await api.get('questions/');
                 const allResponses: any[] = [];
 
                 for (const q of questionsRes.data) {
-                    const res = await api.get(`/questions/`); // Should probably have a separate responses endpoint
+                    const res = await api.get(`questions/`); // Should probably have a separate responses endpoint
                     // For now, assume the analytics or questions endpoint gives us what we need
                     // Let's refine the backend to actually return responses for these questions
                 }

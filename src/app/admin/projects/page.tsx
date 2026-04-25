@@ -69,8 +69,8 @@ export default function ProjectsPage() {
     const fetchProjects = async () => {
         try {
             const [projRes, clientRes] = await Promise.all([
-                api.get('/projects/'),
-                api.get('/clients/')
+                api.get('projects/'),
+                api.get('clients/')
             ]);
             setProjects(projRes.data);
             setClients(clientRes.data);
@@ -88,7 +88,7 @@ export default function ProjectsPage() {
             if (logoFile) {
                 const logoData = new FormData();
                 logoData.append('file', logoFile);
-                const res = await api.post('/upload/', logoData);
+                const res = await api.post('upload/', logoData);
                 uploadedLogoUrl = res.data.url;
             }
 
@@ -96,7 +96,7 @@ export default function ProjectsPage() {
             for (const file of projectDocs) {
                 const d = new FormData();
                 d.append('file', file);
-                const res = await api.post('/upload/', d);
+                const res = await api.post('upload/', d);
                 uploadedDocs.push({
                     file_name: file.name,
                     file_url: res.data.url,
@@ -116,7 +116,7 @@ export default function ProjectsPage() {
                 documents: uploadedDocs
             };
             
-            await api.post('/projects/', payload);
+            await api.post('projects/', payload);
             setFormData({
                 name: '',
                 client_id: '',
@@ -145,7 +145,7 @@ export default function ProjectsPage() {
     const handleStatusUpdate = async (projectId: number, newStatus: string) => {
         setStatusUpdating(projectId);
         try {
-            await api.put(`/projects/${projectId}`, { status: newStatus });
+            await api.put(`projects/${projectId}`, { status: newStatus });
             fetchProjects();
         } catch (err: any) {
             alert('Failed: ' + (err.response?.data?.detail || err.message));
@@ -187,7 +187,7 @@ export default function ProjectsPage() {
             if (editLogoFile) {
                 const logoData = new FormData();
                 logoData.append('file', editLogoFile);
-                const res = await api.post('/upload/', logoData);
+                const res = await api.post('upload/', logoData);
                 uploadedLogoUrl = res.data.url;
             }
 
@@ -195,7 +195,7 @@ export default function ProjectsPage() {
             for (const file of editNewDocs) {
                 const d = new FormData();
                 d.append('file', file);
-                const res = await api.post('/upload/', d);
+                const res = await api.post('upload/', d);
                 uploadedDocs.push({
                     file_name: file.name,
                     file_url: res.data.url,
@@ -218,7 +218,7 @@ export default function ProjectsPage() {
                 documents: uploadedDocs
             };
             
-            await api.put(`/projects/${editProject.id}`, payload);
+            await api.put(`projects/${editProject.id}`, payload);
             setEditProject(null);
             fetchProjects();
         } catch (err: any) {
@@ -234,7 +234,7 @@ export default function ProjectsPage() {
         if (!deleteTarget) return;
         setIsDeleting(true);
         try {
-            await api.delete(`/projects/${deleteTarget.id}`);
+            await api.delete(`projects/${deleteTarget.id}`);
             setDeleteTarget(null);
             fetchProjects();
         } catch (err: any) {

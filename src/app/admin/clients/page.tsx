@@ -62,7 +62,7 @@ export default function ClientsPage() {
 
     const fetchClients = async () => {
         try {
-            const res = await api.get('/clients/');
+            const res = await api.get('clients/');
             setClients(res.data);
         } catch (err) {
             console.error(err);
@@ -92,7 +92,7 @@ export default function ClientsPage() {
         e.preventDefault();
         try {
             const data = prepareData(formData);
-            await api.post('/clients/', data);
+            await api.post('clients/', data);
             closeForm();
             fetchClients();
         } catch (err: any) {
@@ -105,7 +105,7 @@ export default function ClientsPage() {
         if (!editingClientId) return;
         try {
             const data = prepareData(formData);
-            await api.put(`/clients/${editingClientId}`, data);
+            await api.put(`clients/${editingClientId}`, data);
             closeForm();
             fetchClients();
         } catch (err: any) {
@@ -158,7 +158,7 @@ export default function ClientsPage() {
         try {
             const formDataUpload = new FormData();
             formDataUpload.append('file', file);
-            const res = await api.post('/upload/', formDataUpload);
+            const res = await api.post('upload/', formDataUpload);
             if (type === 'logo') {
                 setFormData(prev => ({ ...prev, logo_url: res.data.url }));
             } else {
@@ -176,7 +176,7 @@ export default function ClientsPage() {
     const handleDeleteClient = async (id: number) => {
         if (!confirm('Are you sure you want to delete this client?')) return;
         try {
-            await api.delete(`/clients/${id}`);
+            await api.delete(`clients/${id}`);
             setClients(prev => prev.filter(c => c.id !== id));
         } catch (err) {
             alert('Failed to delete client');

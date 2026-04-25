@@ -44,12 +44,12 @@ export default function EmployeeDashboard() {
     const loadData = useCallback(async () => {
         if (!user) return;
         const [tasksRes, questionsRes, projectsRes, scoresRes, assignmentsRes, analyticsRes] = await Promise.allSettled([
-            api.get('/tasks/'),
-            api.get('/questions/'),
-            api.get('/projects/'),
-            api.get('/kpi-forms/scores/me'),
-            api.get('/kpi-forms/my-forms'),
-            api.get('/analytics/'),
+            api.get('tasks/'),
+            api.get('questions/'),
+            api.get('projects/'),
+            api.get('kpi-forms/scores/me'),
+            api.get('kpi-forms/my-forms'),
+            api.get('analytics/'),
         ]);
         if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value.data);
         if (questionsRes.status === 'fulfilled') setQuestions(questionsRes.value.data);
@@ -121,10 +121,10 @@ export default function EmployeeDashboard() {
             if (uploadFile) {
                 const formData = new FormData();
                 formData.append('file', uploadFile);
-                const res = await api.post('/upload/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const res = await api.post('upload/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 fileUrl = `${API_BASE_URL}${res.data.url}`;
             }
-            await api.post('/submissions/', { project_id: parseInt(projectId), file_url: fileUrl, comment });
+            await api.post('submissions/', { project_id: parseInt(projectId), file_url: fileUrl, comment });
             loadData();
             setUploadFile(null);
             setComment('');
@@ -150,7 +150,7 @@ export default function EmployeeDashboard() {
 
         setIsUpdatingTask(prev => ({ ...prev, [taskId]: true }));
         try {
-            await api.put(`/tasks/${taskId}`, { 
+            await api.put(`tasks/${taskId}`, { 
                 status: nextStatus,
                 completion_notes: notes || undefined 
             });
@@ -173,11 +173,11 @@ export default function EmployeeDashboard() {
             if (file) {
                 const formData = new FormData();
                 formData.append('file', file);
-                const res = await api.post('/upload/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const res = await api.post('upload/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 attachmentUrl = res.data.url;
                 attachmentType = res.data.type;
             }
-            await api.post(`/questions/${questionId}/responses`, {
+            await api.post(`questions/${questionId}/responses`, {
                 response_text: text || (attachmentType === 'audio' ? '🎵 Audio message' : '📄 File attached'),
                 question_id: questionId,
                 attachment_url: attachmentUrl,

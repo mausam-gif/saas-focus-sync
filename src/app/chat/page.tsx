@@ -106,7 +106,7 @@ export default function ChatPage() {
 
     const fetchInbox = useCallback(async () => {
         try {
-            const res = await api.get('/chat/inbox');
+            const res = await api.get('chat/inbox');
             setInbox(res.data.dms);
             setGroupUnread(res.data.group_unread);
         } catch (err) {
@@ -116,7 +116,7 @@ export default function ChatPage() {
 
     const fetchUsers = useCallback(async () => {
         try {
-            const res = await api.get('/chat/users');
+            const res = await api.get('chat/users');
             setAllUsers(res.data);
         } catch (err) {
             console.error("Failed to load users", err);
@@ -125,7 +125,7 @@ export default function ChatPage() {
 
     const markAsRead = useCallback(async (contactId?: number) => {
         try {
-            await api.put('/chat/read', null, { params: { contact_id: contactId } });
+            await api.put('chat/read', null, { params: { contact_id: contactId } });
             fetchInbox();
         } catch (err) {
             console.error("Failed to mark as read", err);
@@ -203,7 +203,7 @@ export default function ChatPage() {
                 setIsUploading(true);
                 const formData = new FormData();
                 formData.append('file', attachment);
-                const uploadRes = await api.post('/upload/', formData, {
+                const uploadRes = await api.post('upload/', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 attachmentUrl = uploadRes.data.url;
@@ -211,7 +211,7 @@ export default function ChatPage() {
                 setIsUploading(false);
             }
 
-            await api.post('/chat/', {
+            await api.post('chat/', {
                 message: newMsg.trim() || null,
                 attachment_url: attachmentUrl,
                 attachment_type: attachmentType,
@@ -288,7 +288,7 @@ export default function ChatPage() {
     const handleEdit = async () => {
         if (!editingMsg || !editValue.trim()) return;
         try {
-            await api.put(`/chat/${editingMsg.id}`, { message: editValue });
+            await api.put(`chat/${editingMsg.id}`, { message: editValue });
             setEditingMsg(null);
             fetchMessages();
         } catch (err) { alert("Failed to edit message"); }
@@ -297,7 +297,7 @@ export default function ChatPage() {
     const handleUnsend = async (id: number) => {
         if (!confirm("Unsend this message?")) return;
         try {
-            await api.delete(`/chat/${id}`);
+            await api.delete(`chat/${id}`);
             fetchMessages();
         } catch (err) { alert("Failed to unsend"); }
     };
@@ -309,7 +309,7 @@ export default function ChatPage() {
             if (clearDate) params.before_date = new Date(clearDate).toISOString();
             if (clearScope === 'dm_user' && activeDmUser) params.target_user_id = activeDmUser.id;
             
-            const res = await api.delete('/chat/admin/clear', { params });
+            const res = await api.delete('chat/admin/clear', { params });
             alert(`Deleted ${res.data.deleted_count} messages`);
             setShowClearModal(false);
             fetchMessages();

@@ -45,8 +45,8 @@ export default function EmployeeFormsPage() {
     const loadData = useCallback(async () => {
         try {
             const [assignRes, scoresRes] = await Promise.all([
-                api.get('/kpi-forms/my-forms'),
-                api.get('/kpi-forms/scores/me')
+                api.get('kpi-forms/my-forms'),
+                api.get('kpi-forms/scores/me')
             ]);
             setAssignments(assignRes.data);
             setMyScores(scoresRes.data);
@@ -64,7 +64,7 @@ export default function EmployeeFormsPage() {
     const openForm = async (assignment: Assignment) => {
         try {
             // Use the employee-specific endpoint that doesn't require admin/manager role
-            const res = await api.get(`/kpi-forms/assignment/${assignment.id}/form`);
+            const res = await api.get(`kpi-forms/assignment/${assignment.id}/form`);
             if (res.data) {
                 setActiveForm(res.data);
                 setActiveAssignment(assignment);
@@ -93,7 +93,7 @@ export default function EmployeeFormsPage() {
                 answer_text: answers[q.id]?.answer_text || null,
                 numeric_value: answers[q.id]?.numeric_value ?? null
             }));
-            const res = await api.post(`/kpi-forms/submit/${activeAssignment.id}`, { answers: payload });
+            const res = await api.post(`kpi-forms/submit/${activeAssignment.id}`, { answers: payload });
             setSubmitted({ score: res.data.your_score });
             loadData();
         } catch (err: any) {

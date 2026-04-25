@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const token = localStorage.getItem('token');
             if (token) {
                 try {
-                    const res = await api.get('/users/me');
+                    const res = await api.get('users/me');
                     setUser(res.data);
                 } catch (error) {
                     console.error("Failed to load user", error);
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const login = async (token: string) => {
         localStorage.setItem('token', token);
         try {
-            const res = await api.get('/users/me');
+            const res = await api.get('users/me');
             setUser(res.data);
         } catch (error) {
             console.error(error);

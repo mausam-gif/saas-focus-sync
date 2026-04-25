@@ -39,7 +39,7 @@ export default function TeamPage() {
     const handleDeleteUser = async (id: number) => {
         if (!confirm('Are you sure you want to delete this user?')) return;
         try {
-            await api.delete(`/users/${id}`);
+            await api.delete(`users/${id}`);
             fetchUsers();
         } catch (err: any) {
             console.error('Failed to delete user', err);
@@ -49,7 +49,7 @@ export default function TeamPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get('/users/');
+            const res = await api.get('users/');
             setUsers(res.data);
         } catch (error) {
             console.error("Failed to fetch users", error);
@@ -92,7 +92,7 @@ export default function TeamPage() {
         e.preventDefault();
         setSubmitStatus({ loading: true, error: '', success: '' });
         try {
-            await api.post('/users/', formData);
+            await api.post('users/', formData);
             setSubmitStatus({ loading: false, error: '', success: 'User created successfully!' });
             resetForm();
             fetchUsers();
@@ -116,7 +116,7 @@ export default function TeamPage() {
 
             // Simple handling: admin can update any, manager can update employees
             // On backend we have PUT /users/{id} for admin
-            await api.put(`/users/${editingUserId}`, data);
+            await api.put(`users/${editingUserId}`, data);
             setSubmitStatus({ loading: false, error: '', success: 'User updated successfully!' });
             fetchUsers();
             setTimeout(() => resetForm(), 1000);

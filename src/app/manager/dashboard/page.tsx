@@ -63,14 +63,14 @@ export default function ManagerDashboard() {
         }
 
         if (user && !authLoading) {
-            api.get('/users/').then(res => setTeam(res.data.filter((u: any) => u.id !== user.id)));
+            api.get('users/').then(res => setTeam(res.data.filter((u: any) => u.id !== user.id)));
             const roleMap: Record<string, string> = { 
                 'ADMIN': 'Elite', 
                 'MANAGER': 'Creative Manager', 
                 'EMPLOYEE': 'Elite Member',
                 'SUPER_ADMIN': 'Platform Master'
             };
-            api.get('/analytics/').then(res => {
+            api.get('analytics/').then(res => {
                 const kpis = res.data;
                 setKpiMetrics(kpis);
                 if (kpis.length > 0) {
@@ -80,14 +80,14 @@ export default function ManagerDashboard() {
                     setStats({ productivity: avgProd, completion: avgComp, efficiency: avgEff });
                 }
             });
-            api.get('/kpi-forms/analytics/overview').then(res => setKpiAnalytics(res.data)).catch(() => { });
-            api.get('/questions/').then(res => setQuestions(res.data));
-            api.get('/projects/').then(res => {
+            api.get('kpi-forms/analytics/overview').then(res => setKpiAnalytics(res.data)).catch(() => { });
+            api.get('questions/').then(res => setQuestions(res.data));
+            api.get('projects/').then(res => {
                 setTaskProjects(res.data);
                 setAllProjects(res.data);
             });
-            api.get('/clients/').then(res => setClients(res.data));
-            api.get('/tasks/').then(res => {
+            api.get('clients/').then(res => setClients(res.data));
+            api.get('tasks/').then(res => {
                 const allTasks = res.data;
                 // Task Oversight shows ALL tasks (the API already scopes correctly per manager role)
                 setSentTasks(allTasks);
@@ -107,7 +107,7 @@ export default function ManagerDashboard() {
         if (!taskAssignTo) return alert('Please select an employee.');
         setIsSendingTask(true);
         try {
-            await api.post('/tasks/', {
+            await api.post('tasks/', {
                 title: taskTitle,
                 description: taskDesc || null,
                 assigned_user: parseInt(taskAssignTo),
@@ -116,7 +116,7 @@ export default function ManagerDashboard() {
             });
             setTaskTitle(''); setTaskDesc(''); setTaskAssignTo('');
             setTaskDueDate(''); setTaskProjectId('');
-            const res = await api.get('/tasks/');
+            const res = await api.get('tasks/');
             setSentTasks(res.data);
         } catch (err: any) {
             alert('Failed: ' + (err.response?.data?.detail || err.message));
@@ -126,12 +126,12 @@ export default function ManagerDashboard() {
     const handleDeleteTask = async (taskId: number) => {
         if (!window.confirm('Are you sure you want to clear this task? This will also update the employee\'s KPI.')) return;
         try {
-            await api.delete(`/tasks/${taskId}`);
-            const res = await api.get('/tasks/');
+            await api.delete(`tasks/${taskId}`);
+            const res = await api.get('tasks/');
             setSentTasks(res.data);
             
             // Refresh KPI metrics to show immediate impact
-            const kpiRes = await api.get('/analytics/calculate/all');
+            const kpiRes = await api.get('analytics/calculate/all');
             setKpiMetrics(kpiRes.data);
         } catch (err: any) {
             alert('Failed to clear task: ' + (err.response?.data?.detail || err.message));
@@ -145,11 +145,11 @@ export default function ManagerDashboard() {
         
         try {
             for (const task of completedTasks) {
-                await api.delete(`/tasks/${task.id}`);
+                await api.delete(`tasks/${task.id}`);
             }
-            const res = await api.get('/tasks/');
+            const res = await api.get('tasks/');
             setSentTasks(res.data);
-            const kpiRes = await api.get('/analytics/calculate/all');
+            const kpiRes = await api.get('analytics/calculate/all');
             setKpiMetrics(kpiRes.data);
             alert('Completed tasks cleared.');
         } catch (err: any) {
@@ -163,7 +163,7 @@ export default function ManagerDashboard() {
             if (selectedProjectId) {
                 params.project_id = selectedProjectId;
             }
-            const response = await api.get('/tasks/export/excel', {
+            const response = await api.get('tasks/export/excel', {
                 params,
                 responseType: 'blob',
             });
@@ -193,14 +193,14 @@ export default function ManagerDashboard() {
     const handleEditTaskSave = async (taskId: number) => {
         setIsSavingTaskEdit(true);
         try {
-            await api.put(`/tasks/${taskId}`, {
+            await api.put(`tasks/${taskId}`, {
                 title: editTaskForm.title || undefined,
                 description: editTaskForm.description || undefined,
                 due_date: editTaskForm.due_date || undefined,
                 status: editTaskForm.status || undefined
             });
             setEditTaskId(null);
-            const res = await api.get('/tasks/');
+            const res = await api.get('tasks/');
             setSentTasks(res.data);
         } catch (err: any) { alert('Failed: ' + (err.response?.data?.detail || err.message)); }
         finally { setIsSavingTaskEdit(false); }
@@ -218,7 +218,7 @@ export default function ManagerDashboard() {
         }
 
         try {
-            await api.put(`/tasks/${taskId}`, { 
+            await api.put(`tasks/${taskId}`, { 
                 status: nextStatus,
                 completion_notes: notes || undefined 
             });
@@ -226,14 +226,14 @@ export default function ManagerDashboard() {
             // Trigger KPI recalculation for this employee
             const task = sentTasks.find(t => t.id === taskId);
             if (task) {
-                await api.post(`/analytics/calculate/${task.assigned_user}`);
+                await api.post(`analytics/calculate/${task.assigned_user}`);
             }
-            const res = await api.get('/tasks/');
+            const res = await api.get('tasks/');
             setSentTasks(res.data);
             setMyPersonalTasks(res.data.filter((t: any) => t.assigned_user === user.id));
             
             // Refresh kpi metrics
-            const kpiRes = await api.get('/analytics/');
+            const kpiRes = await api.get('analytics/');
             setKpiMetrics(kpiRes.data);
             if (kpiRes.data.length > 0) {
                 const kpis = kpiRes.data;
@@ -252,10 +252,10 @@ export default function ManagerDashboard() {
             if (uploadFile) {
                 const formData = new FormData();
                 formData.append('file', uploadFile);
-                const res = await api.post('/upload/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const res = await api.post('upload/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 fileUrl = `${API_BASE_URL}${res.data.url}`;
             }
-            await api.post('/submissions/', { project_id: parseInt(submitProjectId), file_url: fileUrl, comment: submitComment });
+            await api.post('submissions/', { project_id: parseInt(submitProjectId), file_url: fileUrl, comment: submitComment });
             setUploadFile(null);
             setSubmitComment('');
             if (workFileInputRef.current) workFileInputRef.current.value = '';

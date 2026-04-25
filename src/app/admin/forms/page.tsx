@@ -55,7 +55,7 @@ export default function AdminFormsPage() {
 
     const loadForms = useCallback(async () => {
         try {
-            const res = await api.get('/kpi-forms/');
+            const res = await api.get('kpi-forms/');
             setForms(res.data);
         } catch { }
     }, []);
@@ -63,7 +63,7 @@ export default function AdminFormsPage() {
     const handleDeleteForm = async (formId: number, formTitle: string) => {
         if (!confirm(`Delete form "${formTitle}"? This will hide it from all views.`)) return;
         try {
-            await api.delete(`/kpi-forms/${formId}`);
+            await api.delete(`kpi-forms/${formId}`);
             loadForms();
         } catch (err: any) {
             alert('Failed: ' + (err.response?.data?.detail || err.message));
@@ -73,7 +73,7 @@ export default function AdminFormsPage() {
     const handleRevokeAssignment = async (assignmentId: number, employeeName: string) => {
         if (!confirm(`Revoke form assignment for ${employeeName}?`)) return;
         try {
-            await api.delete(`/kpi-forms/assignments/${assignmentId}`);
+            await api.delete(`kpi-forms/assignments/${assignmentId}`);
             setAssignments(prev => prev.filter((a: any) => a.id !== assignmentId));
         } catch (err: any) {
             alert('Failed: ' + (err.response?.data?.detail || err.message));
@@ -82,7 +82,7 @@ export default function AdminFormsPage() {
 
     const loadAnalytics = useCallback(async () => {
         try {
-            const res = await api.get('/kpi-forms/analytics/overview');
+            const res = await api.get('kpi-forms/analytics/overview');
             setAnalytics(res.data);
         } catch { }
     }, []);
@@ -92,7 +92,7 @@ export default function AdminFormsPage() {
         if (!user) return;
         loadForms();
         loadAnalytics();
-        api.get('/users/').then(res =>
+        api.get('users/').then(res =>
             setEmployees(res.data.filter((u: any) => u.role?.toUpperCase() === 'EMPLOYEE'))
         );
     }, [user, authLoading, router, loadForms, loadAnalytics]);
@@ -118,7 +118,7 @@ export default function AdminFormsPage() {
         }
         setIsCreating(true);
         try {
-            await api.post('/kpi-forms/', {
+            await api.post('kpi-forms/', {
                 title, description, frequency,
                 questions: questions.map((q, i) => ({
                     question_text: q.question_text,
@@ -142,7 +142,7 @@ export default function AdminFormsPage() {
     const handleAssign = async (formId: number) => {
         if (!isCompanyWide && selectedEmployees.length === 0) return alert('Select at least one employee.');
         try {
-            await api.post(`/kpi-forms/${formId}/assign`, {
+            await api.post(`kpi-forms/${formId}/assign`, {
                 employee_ids: isCompanyWide ? [] : selectedEmployees,
                 is_company_wide: isCompanyWide,
                 due_date: dueDate || null
@@ -161,7 +161,7 @@ export default function AdminFormsPage() {
     const loadAssignments = async (formId: number) => {
         if (expandedForm === formId) { setExpandedForm(null); return; }
         try {
-            const res = await api.get(`/kpi-forms/${formId}/assignments`);
+            const res = await api.get(`kpi-forms/${formId}/assignments`);
             setAssignments(res.data);
             setExpandedForm(formId);
         } catch { }

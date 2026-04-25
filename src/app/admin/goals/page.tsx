@@ -22,8 +22,8 @@ export default function GoalsPage() {
         const fetchData = async () => {
             try {
                 const [projRes, taskRes] = await Promise.all([
-                    api.get('/projects/'),
-                    api.get('/tasks/')
+                    api.get('projects/'),
+                    api.get('tasks/')
                 ]);
 
                 const enrichedProjects = projRes.data.map((p: any) => {

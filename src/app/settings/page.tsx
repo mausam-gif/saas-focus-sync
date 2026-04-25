@@ -34,7 +34,7 @@ export default function SettingsPage() {
         setIsUpdating(true);
         setMessage(null);
         try {
-            await api.put('/users/me/password', {
+            await api.put('users/me/password', {
                 current_password: currentPassword,
                 new_password: newPassword
             });

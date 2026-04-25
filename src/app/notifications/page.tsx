@@ -21,7 +21,7 @@ export default function NotificationsPage() {
 
     const fetchStatus = useCallback(async () => {
         try {
-            const res = await api.get('/users/me/status');
+            const res = await api.get('users/me/status');
             setStatus(res.data);
         } catch (err) {
             console.error("Failed to fetch notification status", err);

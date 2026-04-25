@@ -34,7 +34,7 @@ export default function SuperAdminDashboard() {
 
     const fetchOrganizations = async () => {
         try {
-            const res = await api.get('/super-admin/organizations');
+            const res = await api.get('super-admin/organizations');
             setOrganizations(res.data);
         } catch (err) {
             console.error(err);
@@ -46,7 +46,7 @@ export default function SuperAdminDashboard() {
     const handleCreateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/super-admin/organizations', {
+            await api.post('super-admin/organizations', {
                 name: newOrg.name,
                 slug: newOrg.slug,
                 subscription_expires_at: newOrg.subscription_expires_at || null
@@ -70,7 +70,7 @@ export default function SuperAdminDashboard() {
 
     const toggleOrgStatus = async (org: any) => {
         try {
-            await api.put(`/super-admin/organizations/${org.id}`, {
+            await api.put(`super-admin/organizations/${org.id}`, {
                 is_active: !org.is_active
             });
             fetchOrganizations();

@@ -48,7 +48,7 @@ export default function NotesPage() {
 
     const fetchNotes = async () => {
         try {
-            const res = await api.get('/notes/');
+            const res = await api.get('notes/');
             setNotes(res.data);
         } catch (err) {
             console.error(err);
@@ -59,7 +59,7 @@ export default function NotesPage() {
 
     const fetchProjects = async () => {
         try {
-            const res = await api.get('/projects/');
+            const res = await api.get('projects/');
             setProjects(res.data);
         } catch (err) {
             console.error(err);
@@ -76,9 +76,9 @@ export default function NotesPage() {
             };
 
             if (isEditing) {
-                await api.put(`/notes/${isEditing}`, payload);
+                await api.put(`notes/${isEditing}`, payload);
             } else {
-                await api.post('/notes/', payload);
+                await api.post('notes/', payload);
             }
             setIsAddModalOpen(false);
             setIsEditing(null);
@@ -92,7 +92,7 @@ export default function NotesPage() {
     const handleDelete = async (id: number) => {
         if (!confirm('Are you sure you want to delete this note?')) return;
         try {
-            await api.delete(`/notes/${id}`);
+            await api.delete(`notes/${id}`);
             fetchNotes();
         } catch (err) {
             console.error(err);

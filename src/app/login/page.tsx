@@ -21,7 +21,7 @@ export default function LoginPage() {
             params.append('username', email);
             params.append('password', password);
 
-            const response = await api.post('/login/access-token', params, {
+            const response = await api.post('login/access-token', params, {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
@@ -31,7 +31,7 @@ export default function LoginPage() {
             await login(token);
 
             // Redirect based on role (could also fetch user details here / wait for auth context)
-            const userRes = await api.get('/users/me', { headers: { Authorization: `Bearer ${token}` } });
+            const userRes = await api.get('users/me', { headers: { Authorization: `Bearer ${token}` } });
             const role = userRes.data.role.toUpperCase();
 
             if (role === 'SUPER_ADMIN') router.push('/super-admin');
