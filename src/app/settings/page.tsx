@@ -51,11 +51,13 @@ export default function SettingsPage() {
 
     if (!user) return null;
 
-    const roleDisplay = {
+    const roleNames: Record<string, string> = {
         'ADMIN': 'Elite',
         'MANAGER': 'Creative Manager',
-        'EMPLOYEE': 'Elite Member'
-    }[user.role] || user.role;
+        'EMPLOYEE': 'Elite Member',
+        'SUPER_ADMIN': 'Platform Master'
+    };
+    const roleDisplay = roleNames[user.role] || user.role;
 
     return (
         <div className="p-4 sm:p-8 font-sans max-w-4xl mx-auto space-y-8">

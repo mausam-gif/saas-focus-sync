@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from './api';
 
-type UserRole = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+type UserRole = 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'SUPER_ADMIN';
 
 interface User {
     id: number;

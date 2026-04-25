@@ -64,7 +64,12 @@ export default function ManagerDashboard() {
 
         if (user && !authLoading) {
             api.get('/users/').then(res => setTeam(res.data.filter((u: any) => u.id !== user.id)));
-            const roleMap: Record<string, string> = { 'ADMIN': 'Elite', 'MANAGER': 'Creative Manager', 'EMPLOYEE': 'Elite Member' };
+            const roleMap: Record<string, string> = { 
+                'ADMIN': 'Elite', 
+                'MANAGER': 'Creative Manager', 
+                'EMPLOYEE': 'Elite Member',
+                'SUPER_ADMIN': 'Platform Master'
+            };
             api.get('/analytics/').then(res => {
                 const kpis = res.data;
                 setKpiMetrics(kpis);
