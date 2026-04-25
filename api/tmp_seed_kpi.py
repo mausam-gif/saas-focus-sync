@@ -1,5 +1,5 @@
-from .db.session import SessionLocal
-from .db.models import KPIForm, KPIQuestion, KPIQuestionType
+from db.session import SessionLocal
+from db.models import KPIForm, KPIQuestion, KPIQuestionType
 import sys
 import os
 

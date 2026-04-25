@@ -1,6 +1,6 @@
-from .db.session import SessionLocal
-from .db.models import User
-from .core.config import settings
+from db.session import SessionLocal
+from db.models import User
+from core.config import settings
 
 print(f"Connecting to: {settings.SQLALCHEMY_DATABASE_URI}")
 

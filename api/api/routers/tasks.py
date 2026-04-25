@@ -1,10 +1,10 @@
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .api import deps
-from .db.models import Task, User, UserRole, Project, TaskStatus
-from .schemas.task import TaskCreate, TaskUpdate, TaskResponse
-from .api.routers.kpi_forms import sync_kpi_scores
+from api import deps
+from db.models import Task, User, UserRole, Project, TaskStatus
+from schemas.task import TaskCreate, TaskUpdate, TaskResponse
+from api.routers.kpi_forms import sync_kpi_scores
 
 router = APIRouter()
 

@@ -2,9 +2,9 @@ import asyncio
 import sqlite3
 import os
 from sqlalchemy.orm import Session
-from .core.security import get_password_hash
-from .db.session import SessionLocal, engine
-from .db.models import Base, User, Project, Task, KPIMetric
+from core.security import get_password_hash
+from db.session import SessionLocal, engine
+from db.models import Base, User, Project, Task, KPIMetric
 from datetime import datetime, timedelta
 
 def migrate_schema():
@@ -137,7 +137,7 @@ def seed_db():
     db.add_all([kpi1, kpi2, kpi3])
     
     # ─── Create Project Evaluation KPI Form ───
-    from .db.models import KPIForm, KPIQuestion, KPIQuestionType
+    from db.models import KPIForm, KPIQuestion, KPIQuestionType
     eval_form = KPIForm(
         title="Project Evaluation Form",
         description="Standard evaluation for completed project stages.",

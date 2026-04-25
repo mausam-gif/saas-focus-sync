@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
-from .schemas.client import ClientResponse
-from .schemas.submission import WorkSubmissionResponse
+from schemas.client import ClientResponse
+from schemas.submission import WorkSubmissionResponse
 
 class ProjectDocumentBase(BaseModel):
     file_name: str

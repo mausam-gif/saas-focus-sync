@@ -2,13 +2,13 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from .api import deps
+from api import deps
 from datetime import datetime, timezone, timedelta
-from .db.models import (
+from db.models import (
     KPIForm, KPIQuestion, KPIFormAssignment, KPIResponse, KPIScore,
     User, UserRole, Task, KPIMetric, Project, WorkSubmission, TaskStatus
 )
-from .schemas.kpi_forms import (
+from schemas.kpi_forms import (
     KPIFormCreate, KPIFormResponse, AssignFormRequest, KPIAssignmentResponse,
     KPIFormSubmitRequest, KPIScoreResponse, CompanyKPIAnalytics, EmployeeKPIAnalytics
 )
@@ -545,7 +545,7 @@ def reset_kpi(
     current_user: User = Depends(deps.get_current_active_admin),
 ) -> Any:
     """Reset KPI scores and metrics for an individual or the entire company. Admin only."""
-    from .db.models import KPIScore, KPIMetric
+    from db.models import KPIScore, KPIMetric
     if employee_id:
         db.query(KPIScore).filter(KPIScore.employee_id == employee_id).delete()
         db.query(KPIMetric).filter(KPIMetric.employee_id == employee_id).delete()

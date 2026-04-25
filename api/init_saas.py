@@ -1,9 +1,9 @@
 import os
 from sqlalchemy import create_engine
-from .db.session import engine
-from .db.models import Base, User, Organization, UserRole
+from db.session import engine
+from db.models import Base, User, Organization, UserRole
 from sqlalchemy.orm import sessionmaker
-from .core.security import get_password_hash
+from core.security import get_password_hash
 from dotenv import load_dotenv
 
 load_dotenv()

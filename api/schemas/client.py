@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional, List
-from .db.models import ReferralSource
+from db.models import ReferralSource
 
 class ClientDocumentBase(BaseModel):
     file_name: str

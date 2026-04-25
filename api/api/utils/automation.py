@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from .db.models import Task, User, Project, TaskStatus, KPIFormAssignment
+from db.models import Task, User, Project, TaskStatus, KPIFormAssignment
 from datetime import datetime, timedelta, timezone
 
 # Task Mapping: designation -> stage -> list of tasks
@@ -159,7 +159,7 @@ def trigger_project_automation(db: Session, project: Project, is_new: bool = Fal
     # If project moves to EVALUATION, assign a general Project Evaluation KPI form to everyone
     if current_stage == "EVALUATION":
         # Find any KPI Form with 'Evaluation' in the title
-        from .db.models import KPIForm
+        from db.models import KPIForm
         evaluation_form = db.query(KPIForm).filter(KPIForm.title.ilike("%Evaluation%"), KPIForm.is_active == True).first()
         
         if evaluation_form:

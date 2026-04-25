@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from .db.models import TaskStatus
+from db.models import TaskStatus
 
 class TaskBase(BaseModel):
     title: str

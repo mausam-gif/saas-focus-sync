@@ -3,10 +3,10 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from .api import deps
-from .db.models import User, UserRole, Task, Project, ChatMessage, KPIMetric, TaskStatus
-from .schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChange, UserStatusResponse
-from .core.security import get_password_hash, verify_password
+from api import deps
+from db.models import User, UserRole, Task, Project, ChatMessage, KPIMetric, TaskStatus
+from schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChange, UserStatusResponse
+from core.security import get_password_hash, verify_password
 
 router = APIRouter()
 
@@ -119,7 +119,7 @@ def delete_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    from .db.models import Task, KPIMetric, WorkSubmission, Response, Question
+    from db.models import Task, KPIMetric, WorkSubmission, Response, Question
     
     # Manually cascade delete to avoid SQLite IntegrityErrors
     db.query(Task).filter(Task.assigned_user == user_id).delete()

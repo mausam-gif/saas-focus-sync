@@ -1,5 +1,5 @@
 import sqlite3
-from .core.security import verify_password, get_password_hash
+from core.security import verify_password, get_password_hash
 
 conn = sqlite3.connect('employee_monitoring.db')
 cursor = conn.cursor()

@@ -5,9 +5,9 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
-from .core.config import settings
-from .db.session import SessionLocal
-from .db.models import User, UserRole, Organization
+from core.config import settings
+from db.session import SessionLocal
+from db.models import User, UserRole, Organization
 
 class TokenPayload(BaseModel):
     sub: str | None = None

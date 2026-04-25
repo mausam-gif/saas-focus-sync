@@ -1,6 +1,6 @@
-from .core.security import get_password_hash
-from .db.session import SessionLocal
-from .db.models import User
+from core.security import get_password_hash
+from db.session import SessionLocal
+from db.models import User
 import sys
 import os
 

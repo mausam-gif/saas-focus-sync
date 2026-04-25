@@ -1,9 +1,9 @@
 import os
 import uuid
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
-from .api import deps
-from .db.models import User
-from .core.config import settings
+from api import deps
+from db.models import User
+from core.config import settings
 from supabase import create_client, Client
 
 router = APIRouter()

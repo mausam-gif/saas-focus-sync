@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .api.routers import (
+from api.routers import (
     users, projects, tasks, questions, submissions, 
     analytics, auth, kpi_forms, upload, clients, notes, chat, super_admin
 )

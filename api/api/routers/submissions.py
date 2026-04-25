@@ -1,9 +1,9 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .api import deps
-from .db.models import WorkSubmission, User, UserRole
-from .schemas.submission import WorkSubmissionCreate, WorkSubmissionResponse
+from api import deps
+from db.models import WorkSubmission, User, UserRole
+from schemas.submission import WorkSubmissionCreate, WorkSubmissionResponse
 
 router = APIRouter()
 
@@ -29,7 +29,7 @@ def create_submission(
     
     # Recalculate KPI for the employee
     try:
-        from .api.routers.kpi_forms import sync_kpi_scores
+        from api.routers.kpi_forms import sync_kpi_scores
         sync_kpi_scores(db, current_user.id)
     except Exception as e:
         print(f"Error syncing KPI for user {current_user.id}: {e}")

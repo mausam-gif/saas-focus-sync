@@ -1,9 +1,9 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .api import deps
-from .db.models import User, Client, UserRole
-from .schemas.client import ClientCreate, ClientUpdate, ClientResponse
+from api import deps
+from db.models import User, Client, UserRole
+from schemas.client import ClientCreate, ClientUpdate, ClientResponse
 
 router = APIRouter()
 
@@ -27,7 +27,7 @@ def create_client(
     )
     
     # Add documents
-    from .db.models import ClientDocument
+    from db.models import ClientDocument
     for doc in documents_data:
         client.documents.append(ClientDocument(**doc.model_dump()))
         
@@ -85,7 +85,7 @@ def update_client(
         
     # Handle documents if provided
     if client_in.documents is not None:
-        from .db.models import ClientDocument
+        from db.models import ClientDocument
         # Clear existing and replace (simple approach)
         client.documents = [ClientDocument(**doc.model_dump()) for doc in client_in.documents]
         

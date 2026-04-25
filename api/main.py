@@ -18,10 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from .api.api import api_router
-from .core.config import settings
-from .db.session import engine
-from .db.models import Base
+from api.api import api_router
+from core.config import settings
+from db.session import engine
+from db.models import Base
 
 Base.metadata.create_all(bind=engine)
 
