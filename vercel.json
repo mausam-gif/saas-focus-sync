@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "/api/v1.py"
+      "destination": "/api_v1.py"
     }
   ]
 }
