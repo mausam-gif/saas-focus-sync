@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+frontend
+public
+src
+# Ignore everything except the Python backend files
+!api
+!db
+!routes_conf
+!core
+!schemas
+!requirements.txt
+!vercel.json
+!main.py
