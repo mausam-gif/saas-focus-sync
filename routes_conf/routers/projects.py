@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from routes_conf import deps
 from db.models import Project, User, UserRole, Client, ProjectDocument
 from schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
-from utils.automation import trigger_project_automation
+from routes_conf.utils.automation import trigger_project_automation
 
 router = APIRouter()
 
