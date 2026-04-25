@@ -84,7 +84,7 @@ def calculate_kpi(
     """
     Calculate KPIs for an employee based on tasks and questions.
     """
-    from api.routers.kpi_forms import sync_kpi_scores
+    from routers.kpi_forms import sync_kpi_scores
     total_score = sync_kpi_scores(db, employee_id)
     
     metric = db.query(KPIMetric).filter(KPIMetric.employee_id == employee_id).first()
@@ -98,6 +98,6 @@ def calculate_all_kpis(
     """
     Recalculate KPIs for all employees. Admin only.
     """
-    from api.routers.kpi_forms import sync_all_kpis
+    from routers.kpi_forms import sync_all_kpis
     sync_all_kpis(db)
     return {"message": "All metrics calculated successfully"}

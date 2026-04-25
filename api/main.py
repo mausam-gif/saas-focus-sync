@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from api.api import api_router
+from routes_conf import api_router
 from core.config import settings
 from db.session import engine
 from db.models import Base

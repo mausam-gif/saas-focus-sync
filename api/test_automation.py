@@ -1,6 +1,6 @@
 from db.session import SessionLocal
 from db.models import Project, Task, KPIFormAssignment, User
-from api.utils.automation import trigger_project_automation
+from utils.automation import trigger_project_automation
 from datetime import datetime, timedelta, timezone
 import sys
 import os
