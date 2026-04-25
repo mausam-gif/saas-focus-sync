@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from api import deps
+from routes_conf import deps
 from db.models import User, UserRole, Task, Project, ChatMessage, KPIMetric, TaskStatus
 from schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChange, UserStatusResponse
 from core.security import get_password_hash, verify_password

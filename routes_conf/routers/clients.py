@@ -1,7 +1,7 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from api import deps
+from routes_conf import deps
 from db.models import User, Client, UserRole
 from schemas.client import ClientCreate, ClientUpdate, ClientResponse
 

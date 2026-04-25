@@ -1,7 +1,7 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from api import deps
+from routes_conf import deps
 from db.models import Question, Response, User, UserRole, Task
 from schemas.question import QuestionCreate, QuestionResponse, ResponseCreate, ResponseResponse
 import os

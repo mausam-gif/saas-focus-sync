@@ -1,7 +1,7 @@
 import os
 import uuid
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
-from api import deps
+from routes_conf import deps
 from db.models import User
 from core.config import settings
 from supabase import create_client, Client

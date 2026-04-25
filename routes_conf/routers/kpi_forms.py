@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from api import deps
+from routes_conf import deps
 from datetime import datetime, timezone, timedelta
 from db.models import (
     KPIForm, KPIQuestion, KPIFormAssignment, KPIResponse, KPIScore,
