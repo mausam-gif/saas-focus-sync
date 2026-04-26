@@ -92,7 +92,8 @@ export default function TeamPage() {
         e.preventDefault();
         setSubmitStatus({ loading: true, error: '', success: '' });
         try {
-            await api.post('users/', formData);
+            const data = { ...formData, unit: formData.unit || null };
+            await api.post('users/', data);
             setSubmitStatus({ loading: false, error: '', success: 'User created successfully!' });
             resetForm();
             fetchUsers();
@@ -111,11 +112,9 @@ export default function TeamPage() {
         setSubmitStatus({ loading: true, error: '', success: '' });
         try {
             const { password, ...updateData } = formData;
-            const data: any = { ...updateData };
+            const data: any = { ...updateData, unit: updateData.unit || null };
             if (password) data.password = password;
 
-            // Simple handling: admin can update any, manager can update employees
-            // On backend we have PUT /users/{id} for admin
             await api.put(`users/${editingUserId}`, data);
             setSubmitStatus({ loading: false, error: '', success: 'User updated successfully!' });
             fetchUsers();

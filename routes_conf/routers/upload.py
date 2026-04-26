@@ -9,9 +9,11 @@ from supabase import create_client, Client
 router = APIRouter()
 
 # Initialize Supabase client
-supabase: Client = None
-if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+def get_supabase():
+    from supabase import create_client
+    if settings.SUPABASE_URL and settings.SUPABASE_KEY:
+        return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+    return None
 
 ALLOWED_TYPES = {
     # Images
@@ -69,6 +71,7 @@ async def upload_file(
         raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
     # Upload to Supabase
+    supabase = get_supabase()
     if supabase:
         try:
             # Upload file

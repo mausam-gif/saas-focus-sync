@@ -21,6 +21,9 @@ def create_client(
     documents_data = client_in.documents or []
     client_data = client_in.model_dump(exclude={"documents"})
     
+    print("DEBUG current_user:", current_user.id, current_user.organization_id, current_user.role, type(current_user))
+    print("DEBUG client_data:", client_data)
+    
     # Enforce organization isolation
     client = Client(
         **client_data,

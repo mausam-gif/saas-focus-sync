@@ -54,8 +54,8 @@ class User(Base):
     phone = Column(String, nullable=True)  # WhatsApp
     location = Column(String, nullable=True)
     designation = Column(String, nullable=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True) # SuperAdmins might not belong to one
-    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True) # SuperAdmins might not belong to one
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     last_group_read_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
@@ -94,8 +94,8 @@ class Client(Base):
     upsell_potential = Column(Text, nullable=True)
     
     created_at = Column(DateTime, default=datetime.now)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
 
     organization = relationship("Organization", back_populates="clients")
     creator = relationship("User", back_populates="clients_created")
@@ -140,7 +140,7 @@ class Project(Base):
     editing_fee = Column(Float, nullable=True)
     the_hook = Column(Text, nullable=True)
     logo_url = Column(String, nullable=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
 
     organization = relationship("Organization", back_populates="projects")
     client = relationship("Client", back_populates="projects")
@@ -167,8 +167,8 @@ class Task(Base):
     title = Column(String, nullable=False, default="Task")
     description = Column(String, nullable=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)  # optional project link
-    assigned_user = Column(Integer, ForeignKey("users.id"), nullable=False)
-    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=True)   # who sent the task
+    assigned_user = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)   # who sent the task
     due_date = Column(DateTime, nullable=True)
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.TODO, nullable=False)
     progress = Column(Integer, default=0)  # 0 to 100
@@ -342,8 +342,8 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     message = Column(Text, nullable=True)
     attachment_url = Column(String, nullable=True)
     attachment_type = Column(String, nullable=True)

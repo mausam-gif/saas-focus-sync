@@ -3,14 +3,18 @@ Vercel Python Serverless Entry Point for FastAPI.
 """
 import sys
 import os
+import traceback
 
 # Add project root to sys.path BEFORE any imports
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Depends
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from routes_conf import deps
 
 # Create the app object at MODULE LEVEL so Vercel detects it
 app = FastAPI(
@@ -21,18 +25,35 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://vastproject-nine.vercel.app",
+        "https://vast-project-nine.vercel.app",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount all routes - NO database connection at startup (lazy connection)
+# Global exception handler
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    print(f"ERROR: {request.method} {request.url.path} - {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"}
+    )
+
+# Mount all routes
 from routes_conf import api_router
 from core.config import settings
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
-def root():
-    return {"message": "Vast Focus Sync API - ONLINE", "status": "ok"}
+def root(db: Session = Depends(deps.get_db)):
+    from db.models import User
+    user2 = db.query(User).filter(User.id == 2).first()
+    org_id = user2.organization_id if user2 else "User not found"
+    return {"message": "Vast Focus Sync API - ONLINE", "status": "ok", "user2_org_id": org_id, "user2_role": user2.role if user2 else None}
+
