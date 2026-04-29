@@ -66,31 +66,34 @@ def get_dashboard_summary(
     org_id = current_user.organization_id
     
     # Counts
-    user_query = db.query(User).filter(User.organization_id == org_id)
-    employee_count = user_query.filter(User.role == UserRole.EMPLOYEE).count()
+    from sqlalchemy import select, literal_column
     
-    project_query = db.query(Project).filter(Project.organization_id == org_id)
-    project_count = project_query.count()
-    active_project_count = project_query.filter(Project.status != "COMPLETED").count()
-    
-    task_query = db.query(Task).join(User, Task.assigned_user == User.id).filter(User.organization_id == org_id)
-    pending_tasks = task_query.filter(Task.status != "DONE").count()
-    
-    # Avg Productivity (Optimized query)
-    avg_metrics = db.query(
-        func.avg(KPIMetric.productivity_score).label("productivity"),
-        func.avg(KPIMetric.task_completion_rate).label("completion"),
-        func.avg(KPIMetric.efficiency_score).label("efficiency")
-    ).join(User, KPIMetric.employee_id == User.id).filter(User.organization_id == org_id).first()
-    
+    # Combined query for all counts and averages in one go
+    # This is much faster as it's a single database roundtrip
+    summary = db.execute(select(
+        func.count(User.id).filter(User.role == UserRole.EMPLOYEE).label("employee_count"),
+        
+        # Subquery for projects
+        select(func.count(Project.id)).where(Project.organization_id == org_id).scalar_subquery().label("project_count"),
+        select(func.count(Project.id)).where(Project.organization_id == org_id, Project.status != "COMPLETED").scalar_subquery().label("active_projects"),
+        
+        # Subquery for tasks
+        select(func.count(Task.id)).join(User, Task.assigned_user == User.id).where(User.organization_id == org_id, Task.status != "DONE").scalar_subquery().label("pending_tasks"),
+        
+        # Metrics
+        func.avg(KPIMetric.productivity_score).label("avg_prod"),
+        func.avg(KPIMetric.task_completion_rate).label("avg_comp"),
+        func.avg(KPIMetric.efficiency_score).label("avg_eff")
+    ).select_from(User).outerjoin(KPIMetric, User.id == KPIMetric.employee_id).where(User.organization_id == org_id)).first()
+
     return {
-        "employee_count": employee_count,
-        "project_count": project_count,
-        "active_project_count": active_project_count,
-        "pending_tasks_count": pending_tasks,
-        "avg_productivity": round(avg_metrics.productivity or 0, 1),
-        "avg_completion": round(avg_metrics.completion or 0, 1),
-        "avg_efficiency": round(avg_metrics.efficiency or 0, 1)
+        "employee_count": summary.employee_count or 0,
+        "project_count": summary.project_count or 0,
+        "active_project_count": summary.active_projects or 0,
+        "pending_tasks_count": summary.pending_tasks or 0,
+        "avg_productivity": round(summary.avg_prod or 0, 1),
+        "avg_completion": round(summary.avg_comp or 0, 1),
+        "avg_efficiency": round(summary.avg_eff or 0, 1)
     }
 
 @router.get("/company-kpi")

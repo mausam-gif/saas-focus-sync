@@ -53,24 +53,36 @@ export default function AdminDashboard() {
 
     const loadData = useCallback(async () => {
         if (!user) return;
+        setLoading(true);
         try {
-            // Fetch everything in parallel to avoid waterfalls
+            // PHASE 1: Urgent Data (Summary Stats)
+            const summaryRes = await api.get('analytics/summary');
+            const summaryData = summaryRes.data || {};
+
+            setStats([
+                { title: 'Total Employees', value: summaryData.employee_count || 0, icon: <Users className="w-6 h-6" />, color: 'bg-blue-500' },
+                { title: 'Active Projects', value: summaryData.active_project_count || 0, icon: <Briefcase className="w-6 h-6" />, color: 'bg-purple-500' },
+                { title: 'Pending Tasks', value: summaryData.pending_tasks_count || 0, icon: <CheckSquare className="w-6 h-6" />, color: 'bg-yellow-500' },
+                { title: 'Avg Productivity', value: `${summaryData.avg_productivity || 0}%`, icon: <TrendingUp className="w-6 h-6" />, color: 'bg-green-500' },
+            ]);
+
+            setLoading(false);
+
+            // PHASE 2: Background Data (Heavy Charts & Lists)
             const [
                 projectsRes,
                 usersRes,
                 tasksAssigned,
                 metricsRes,
-                summaryRes,
                 questionsRes,
                 clientsRes
             ] = await Promise.all([
-                api.get('projects/'),
-                api.get('users/'),
-                api.get('tasks/'),
-                api.get('analytics/'),
-                api.get('analytics/summary'),
-                api.get('questions/'),
-                api.get('clients/')
+                api.get('projects/').catch(() => ({ data: [] })),
+                api.get('users/').catch(() => ({ data: [] })),
+                api.get('tasks/').catch(() => ({ data: [] })),
+                api.get('analytics/').catch(() => ({ data: [] })),
+                api.get('questions/').catch(() => ({ data: [] })),
+                api.get('clients/').catch(() => ({ data: [] }))
             ]);
 
             // 1. Process Projects & Gantt

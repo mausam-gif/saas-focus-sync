@@ -62,36 +62,37 @@ export default function ManagerDashboard() {
             return;
         }
 
-        if (user && !authLoading) {
-            Promise.all([
-                api.get('users/'),
-                api.get('analytics/'),
-                api.get('analytics/summary'),
-                api.get('kpi-forms/analytics/overview').catch(() => ({ data: null })),
-                api.get('questions/'),
-                api.get('projects/'),
-                api.get('clients/'),
-                api.get('tasks/')
-            ]).then(([usersRes, analyticsRes, summaryRes, kpiRes, questionsRes, projectsRes, clientsRes, tasksRes]) => {
-                const userData = usersRes.data || [];
-                setTeam(userData.filter((u: any) => u.id !== user.id));
-                
-                const kpis = analyticsRes.data || [];
-                setKpiMetrics(kpis);
-                
+        const loadManagerData = async () => {
+            if (!user || authLoading) return;
+            
+            try {
+                // PHASE 1: Immediate Stats
+                const summaryRes = await api.get('analytics/summary');
                 if (summaryRes.data) {
                     setStats({
                         productivity: summaryRes.data.avg_productivity || 0,
                         completion: summaryRes.data.avg_completion || 0,
                         efficiency: summaryRes.data.avg_efficiency || 0
                     });
-                } else if (kpis.length > 0) {
-                    const avgProd = kpis.reduce((acc: any, curr: any) => acc + (curr.productivity_score || 0), 0) / kpis.length;
-                    const avgComp = kpis.reduce((acc: any, curr: any) => acc + (curr.task_completion_rate || 0), 0) / kpis.length;
-                    const avgEff = kpis.reduce((acc: any, curr: any) => acc + (curr.efficiency_score || 0), 0) / kpis.length;
-                    setStats({ productivity: avgProd, completion: avgComp, efficiency: avgEff });
                 }
 
+                // PHASE 2: Background Data
+                const [usersRes, analyticsRes, kpiRes, questionsRes, projectsRes, clientsRes, tasksRes] = await Promise.all([
+                    api.get('users/').catch(() => ({ data: [] })),
+                    api.get('analytics/').catch(() => ({ data: [] })),
+                    api.get('kpi-forms/analytics/overview').catch(() => ({ data: null })),
+                    api.get('questions/').catch(() => ({ data: [] })),
+                    api.get('projects/').catch(() => ({ data: [] })),
+                    api.get('clients/').catch(() => ({ data: [] })),
+                    api.get('tasks/').catch(() => ({ data: [] }))
+                ]);
+
+                const userData = usersRes.data || [];
+                setTeam(userData.filter((u: any) => u.id !== user.id));
+                
+                const kpis = analyticsRes.data || [];
+                setKpiMetrics(kpis);
+                
                 setKpiAnalytics(kpiRes.data);
                 setQuestions(questionsRes.data || []);
                 const projectData = projectsRes.data || [];
@@ -102,10 +103,12 @@ export default function ManagerDashboard() {
                 const allTasks = tasksRes.data || [];
                 setSentTasks(allTasks);
                 setMyPersonalTasks(allTasks.filter((t: any) => t.assigned_user === user.id));
-            }).catch(err => {
-                console.error("Dashboard parallel load failed", err);
-            });
-        }
+            } catch (err) {
+                console.error("Dashboard staged load failed", err);
+            }
+        };
+
+        loadManagerData();
     }, [user, authLoading, router]);
 
 
@@ -312,7 +315,6 @@ export default function ManagerDashboard() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 {[
-                    { title: "Team Members", value: team.length.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
                     { title: "Avg Completion", value: `${Math.round(stats.completion)}%`, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
                     { title: "Avg Efficiency", value: `${Math.round(stats.efficiency)}%`, icon: ChartBar, color: "text-purple-600", bg: "bg-purple-50" },
                 ].map((stat, i) => {
