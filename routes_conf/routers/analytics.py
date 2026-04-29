@@ -1,9 +1,9 @@
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from routes_conf import deps
-from db.models import KPIMetric, Task, User, TaskStatus, UserRole
+from db.models import KPIMetric, Task, User, TaskStatus, UserRole, Project
 from pydantic import BaseModel
 
 class KPIMetricResponse(BaseModel):
@@ -29,21 +29,22 @@ def read_kpi_metrics(
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Retrieve KPI metrics.
+    Retrieve KPI metrics with optimized joining.
     """
+    query = db.query(KPIMetric).options(joinedload(KPIMetric.employee))
+    
     if current_user.role == UserRole.ADMIN:
-        metrics = db.query(KPIMetric).all()
+        metrics = query.offset(skip).limit(limit).all()
     elif current_user.role == UserRole.MANAGER:
-        metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(User.manager_id == current_user.id).all()
+        metrics = query.join(User, KPIMetric.employee_id == User.id).filter(User.manager_id == current_user.id).offset(skip).limit(limit).all()
     else:
-        metrics = db.query(KPIMetric).filter(KPIMetric.employee_id == current_user.id).all()
+        metrics = query.filter(KPIMetric.employee_id == current_user.id).offset(skip).limit(limit).all()
         
     result = []
     for m in metrics:
-        emp = db.query(User).filter(User.id == m.employee_id).first()
         result.append({
             "employee_id": m.employee_id,
-            "employee_name": emp.name if emp else "Unknown",
+            "employee_name": m.employee.name if m.employee else "Unknown",
             "productivity_score": m.productivity_score,
             "task_completion_rate": m.task_completion_rate,
             "efficiency_score": m.efficiency_score,
@@ -52,6 +53,45 @@ def read_kpi_metrics(
             "form_score": m.form_score
         })
     return result
+
+@router.get("/summary")
+def get_dashboard_summary(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Get quick summary stats for dashboard cards. Optimized for speed.
+    """
+    # Organization isolation
+    org_id = current_user.organization_id
+    
+    # Counts
+    user_query = db.query(User).filter(User.organization_id == org_id)
+    employee_count = user_query.filter(User.role == UserRole.EMPLOYEE).count()
+    
+    project_query = db.query(Project).filter(Project.organization_id == org_id)
+    project_count = project_query.count()
+    active_project_count = project_query.filter(Project.status != "COMPLETED").count()
+    
+    task_query = db.query(Task).join(User, Task.assigned_user == User.id).filter(User.organization_id == org_id)
+    pending_tasks = task_query.filter(Task.status != "DONE").count()
+    
+    # Avg Productivity (Optimized query)
+    avg_metrics = db.query(
+        func.avg(KPIMetric.productivity_score).label("productivity"),
+        func.avg(KPIMetric.task_completion_rate).label("completion"),
+        func.avg(KPIMetric.efficiency_score).label("efficiency")
+    ).join(User, KPIMetric.employee_id == User.id).filter(User.organization_id == org_id).first()
+    
+    return {
+        "employee_count": employee_count,
+        "project_count": project_count,
+        "active_project_count": active_project_count,
+        "pending_tasks_count": pending_tasks,
+        "avg_productivity": round(avg_metrics.productivity or 0, 1),
+        "avg_completion": round(avg_metrics.completion or 0, 1),
+        "avg_efficiency": round(avg_metrics.efficiency or 0, 1)
+    }
 
 @router.get("/company-kpi")
 def get_company_kpi(

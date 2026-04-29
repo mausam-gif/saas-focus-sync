@@ -63,36 +63,47 @@ export default function ManagerDashboard() {
         }
 
         if (user && !authLoading) {
-            api.get('users/').then(res => setTeam(res.data.filter((u: any) => u.id !== user.id)));
-            const roleMap: Record<string, string> = { 
-                'ADMIN': 'Elite', 
-                'MANAGER': 'Creative Manager', 
-                'EMPLOYEE': 'Elite Member',
-                'SUPER_ADMIN': 'Platform Master'
-            };
-            api.get('analytics/').then(res => {
-                const kpis = res.data;
+            Promise.all([
+                api.get('users/'),
+                api.get('analytics/'),
+                api.get('analytics/summary'),
+                api.get('kpi-forms/analytics/overview').catch(() => ({ data: null })),
+                api.get('questions/'),
+                api.get('projects/'),
+                api.get('clients/'),
+                api.get('tasks/')
+            ]).then(([usersRes, analyticsRes, summaryRes, kpiRes, questionsRes, projectsRes, clientsRes, tasksRes]) => {
+                const userData = usersRes.data || [];
+                setTeam(userData.filter((u: any) => u.id !== user.id));
+                
+                const kpis = analyticsRes.data || [];
                 setKpiMetrics(kpis);
-                if (kpis.length > 0) {
-                    const avgProd = kpis.reduce((acc: any, curr: any) => acc + curr.productivity_score, 0) / kpis.length;
-                    const avgComp = kpis.reduce((acc: any, curr: any) => acc + curr.task_completion_rate, 0) / kpis.length;
-                    const avgEff = kpis.reduce((acc: any, curr: any) => acc + curr.efficiency_score, 0) / kpis.length;
+                
+                if (summaryRes.data) {
+                    setStats({
+                        productivity: summaryRes.data.avg_productivity || 0,
+                        completion: summaryRes.data.avg_completion || 0,
+                        efficiency: summaryRes.data.avg_efficiency || 0
+                    });
+                } else if (kpis.length > 0) {
+                    const avgProd = kpis.reduce((acc: any, curr: any) => acc + (curr.productivity_score || 0), 0) / kpis.length;
+                    const avgComp = kpis.reduce((acc: any, curr: any) => acc + (curr.task_completion_rate || 0), 0) / kpis.length;
+                    const avgEff = kpis.reduce((acc: any, curr: any) => acc + (curr.efficiency_score || 0), 0) / kpis.length;
                     setStats({ productivity: avgProd, completion: avgComp, efficiency: avgEff });
                 }
-            });
-            api.get('kpi-forms/analytics/overview').then(res => setKpiAnalytics(res.data)).catch(() => { });
-            api.get('questions/').then(res => setQuestions(res.data));
-            api.get('projects/').then(res => {
-                setTaskProjects(res.data);
-                setAllProjects(res.data);
-            });
-            api.get('clients/').then(res => setClients(res.data));
-            api.get('tasks/').then(res => {
-                const allTasks = res.data;
-                // Task Oversight shows ALL tasks (the API already scopes correctly per manager role)
+
+                setKpiAnalytics(kpiRes.data);
+                setQuestions(questionsRes.data || []);
+                const projectData = projectsRes.data || [];
+                setTaskProjects(projectData);
+                setAllProjects(projectData);
+                setClients(clientsRes.data || []);
+                
+                const allTasks = tasksRes.data || [];
                 setSentTasks(allTasks);
-                // "Tasks Assigned to Me" only shows tasks assigned TO the manager themselves
                 setMyPersonalTasks(allTasks.filter((t: any) => t.assigned_user === user.id));
+            }).catch(err => {
+                console.error("Dashboard parallel load failed", err);
             });
         }
     }, [user, authLoading, router]);

@@ -54,10 +54,29 @@ export default function AdminDashboard() {
     const loadData = useCallback(async () => {
         if (!user) return;
         try {
-            // Fetch Projects for Gantt Chart
-            const projectsRes = await api.get('projects/');
-            setProjects(projectsRes.data);
-            const fetchedTasks = projectsRes.data.map((p: any) => {
+            // Fetch everything in parallel to avoid waterfalls
+            const [
+                projectsRes,
+                usersRes,
+                tasksAssigned,
+                metricsRes,
+                summaryRes,
+                questionsRes,
+                clientsRes
+            ] = await Promise.all([
+                api.get('projects/'),
+                api.get('users/'),
+                api.get('tasks/'),
+                api.get('analytics/'),
+                api.get('analytics/summary'),
+                api.get('questions/'),
+                api.get('clients/')
+            ]);
+
+            // 1. Process Projects & Gantt
+            const projectData = projectsRes.data || [];
+            setProjects(projectData);
+            const fetchedTasks = projectData.map((p: any) => {
                 let progress = 20;
                 let customClass = 'bar-analysis';
                 const s = p.status?.toUpperCase();
@@ -77,55 +96,30 @@ export default function AdminDashboard() {
             });
             setTasks(fetchedTasks);
 
-            // Fetch Users for Stats and team lists
-            const usersRes = await api.get('users/');
-            const allEmployees = usersRes.data.filter((u: any) => u.role.toUpperCase() === 'EMPLOYEE');
-            const allManagers = usersRes.data.filter((u: any) => u.role.toUpperCase() === 'MANAGER');
+            // 2. Process Users & Team
+            const userData = usersRes.data || [];
+            const allEmployees = userData.filter((u: any) => u.role.toUpperCase() === 'EMPLOYEE');
+            const allManagers = userData.filter((u: any) => u.role.toUpperCase() === 'MANAGER');
             setManagers(allManagers);
             setTeam(allEmployees);
-            // All users (managers + employees) for task assignment
-            setAllUsers(usersRes.data.filter((u: any) => u.id !== user?.id));
+            setAllUsers(userData.filter((u: any) => u.id !== user?.id));
 
-            // Load already-assigned tasks
-            try {
-                const tasksAssigned = await api.get('tasks/');
-                setSentTasks(tasksAssigned.data);
-            } catch (err) {
-                console.error("Tasks load failed", err);
-                setSentTasks([]);
-            }
+            // 3. Set Tasks & Metrics
+            setSentTasks(tasksAssigned.data || []);
+            setKpiMetrics(metricsRes.data || []);
 
-            // Fetch Unified KPI Metrics (Tasks + Projects + Forms)
-            try {
-                const metricsRes = await api.get('analytics/');
-                setKpiMetrics(metricsRes.data);
-            } catch (err) {
-                console.error("Unified metrics load failed", err);
-            }
-
-            // Fetch KPI Forms Analytics (Legacy/Form-specific)
-            try {
-                const kpiRes = await api.get('kpi-forms/analytics/overview');
-                setKpiAnalytics(kpiRes.data);
-                
-                // Get company average from analytics if available
-                const compKpiRes = await api.get('analytics/company-kpi');
+            // 4. Set Stats from Optimized Summary
+            if (summaryRes.data) {
                 setStats({
-                    employees: allEmployees.length,
-                    projects: projectsRes.data.length,
-                    avgProductivity: compKpiRes.data.productivity || 0
+                    employees: summaryRes.data.employee_count,
+                    projects: summaryRes.data.project_count,
+                    avgProductivity: summaryRes.data.avg_productivity
                 });
-            } catch {
-                setStats({ employees: allEmployees.length, projects: projectsRes.data.length, avgProductivity: 0 });
             }
 
-            // Fetch Questions
-            const questionsRes = await api.get('questions/');
-            setQuestions(questionsRes.data);
-
-            // Fetch Clients for filtering
-            const clientsRes = await api.get('clients/');
-            setClients(clientsRes.data);
+            // 5. Set Questions & Clients
+            setQuestions(questionsRes.data || []);
+            setClients(clientsRes.data || []);
 
         } catch (error) {
             console.error("Failed to load dashboard data", error);
