@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://vast-api-zeta.vercel.app/api/v1/:path*"
+    }
+  ]
+}
