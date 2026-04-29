@@ -51,6 +51,11 @@ from core.config import settings
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
-def root():
-    return {"message": "Vast Focus Sync API - ONLINE", "status": "ok"}
+def root(db: Session = Depends(deps.get_db)):
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+        return {"message": "Vast Focus Sync API - ONLINE", "database": "CONNECTED"}
+    except Exception as e:
+        return {"message": "Vast Focus Sync API - ONLINE", "database": "ERROR", "detail": str(e)}
 

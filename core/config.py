@@ -10,12 +10,18 @@ class Settings(BaseSettings):
     
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        if self.DATABASE_URL:
-            # SQLAlchemy 1.4+ needs postgresql:// instead of postgres://
-            if self.DATABASE_URL.startswith("postgres://"):
-                return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
-            return self.DATABASE_URL
+        # Priority 1: DATABASE_URL from Vercel/Environment
+        db_url = os.getenv("DATABASE_URL") or self.DATABASE_URL
         
+        if db_url:
+            print(f"DEBUG: Using DATABASE_URL (starts with {db_url[:15]}...)")
+            # SQLAlchemy 1.4+ needs postgresql:// instead of postgres://
+            if db_url.startswith("postgres://"):
+                return db_url.replace("postgres://", "postgresql://", 1)
+            return db_url
+        
+        # Priority 2: Fallback to local SQLite (only for local dev)
+        print("DEBUG: DATABASE_URL not found, falling back to local SQLite")
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         db_path = os.path.join(base_dir, "employee_monitoring.db")
         return f"sqlite:///{db_path}"
@@ -30,6 +36,6 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
     
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
 settings = Settings()
