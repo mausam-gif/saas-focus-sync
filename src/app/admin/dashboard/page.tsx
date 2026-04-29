@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { GanttChart } from '@/components/GanttChart';
-import { Plus, Users, FolderKanban, TrendingUp, Search, Send, CheckCircle2, Loader2, Building2, User, ClipboardList, Mic, MicOff, Paperclip, Download, FileText, ExternalLink, File as FileIcon, Briefcase, UploadCloud, X, BarChart2, CalendarDays, Trash2, MessageSquare, Calendar, ChartBar, AlertCircle, Filter, CheckCircle, Edit, Clock } from 'lucide-react';
+import { Plus, Users, FolderKanban, TrendingUp, Search, Send, CheckCircle2, Loader2, Building2, User, ClipboardList, Mic, MicOff, Paperclip, Download, FileText, ExternalLink, File as FileIcon, Briefcase, UploadCloud, X, BarChart2, CalendarDays, Trash2, MessageSquare, Calendar, ChartBar, AlertCircle, Filter, CheckCircle, Edit, Clock, CheckSquare } from 'lucide-react';
 import { api, API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
@@ -59,12 +59,11 @@ export default function AdminDashboard() {
             const summaryRes = await api.get('analytics/summary');
             const summaryData = summaryRes.data || {};
 
-            setStats([
-                { title: 'Total Employees', value: summaryData.employee_count || 0, icon: <Users className="w-6 h-6" />, color: 'bg-blue-500' },
-                { title: 'Active Projects', value: summaryData.active_project_count || 0, icon: <Briefcase className="w-6 h-6" />, color: 'bg-purple-500' },
-                { title: 'Pending Tasks', value: summaryData.pending_tasks_count || 0, icon: <CheckSquare className="w-6 h-6" />, color: 'bg-yellow-500' },
-                { title: 'Avg Productivity', value: `${summaryData.avg_productivity || 0}%`, icon: <TrendingUp className="w-6 h-6" />, color: 'bg-green-500' },
-            ]);
+            setStats({
+                employees: summaryData.employee_count || 0,
+                projects: summaryData.active_project_count || 0,
+                avgProductivity: summaryData.avg_productivity || 0,
+            });
 
             setLoading(false);
 
@@ -121,11 +120,11 @@ export default function AdminDashboard() {
             setKpiMetrics(metricsRes.data || []);
 
             // 4. Set Stats from Optimized Summary
-            if (summaryRes.data) {
+            if (summaryRes && summaryRes.data) {
                 setStats({
-                    employees: summaryRes.data.employee_count,
-                    projects: summaryRes.data.project_count,
-                    avgProductivity: summaryRes.data.avg_productivity
+                    employees: summaryRes.data.employee_count || 0,
+                    projects: summaryRes.data.active_project_count || 0,
+                    avgProductivity: summaryRes.data.avg_productivity || 0
                 });
             }
 
