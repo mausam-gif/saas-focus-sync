@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.idea
+venv
+__pycache__
+*.pyc
+frontend
+vast_project.zip
+vast_project copy
+scratch
+uploads
+public

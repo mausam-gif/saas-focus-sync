@@ -116,8 +116,8 @@ def export_tasks_excel(
     current_user: User = Depends(deps.get_current_active_manager_or_admin),
 ) -> Any:
     """Export tasks to Excel for Admins and Managers."""
-    import pandas as pd
     import io
+    from openpyxl import Workbook
     from fastapi.responses import StreamingResponse
     from datetime import datetime
 
@@ -125,7 +125,7 @@ def export_tasks_excel(
     
     if project_id:
         query = query.filter(Task.project_id == project_id)
-    # Role-based filtering
+    
     if current_user.role == UserRole.MANAGER:
         from sqlalchemy import select as sa_select
         employee_ids_q = sa_select(User.id).where(User.role == UserRole.EMPLOYEE)
@@ -136,11 +136,23 @@ def export_tasks_excel(
         )
     
     tasks_list = query.all()
-    data = []
+    
+    # Create Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Tasks Report"
+    
+    # Header row
+    headers = [
+        "Project", "Task Title", "Description", "Assignee", 
+        "Assigned By", "Status", "Due Date", "Created At", 
+        "Started At", "Completed At", "Duration", "Completion Notes"
+    ]
+    ws.append(headers)
+    
     for t in tasks_list:
         enriched = enrich_task(t, db)
         
-        # Calculate duration safely
         duration_str = "N/A"
         if t.completed_at:
             start_time = t.started_at or t.created_at or t.completed_at
@@ -151,31 +163,27 @@ def export_tasks_excel(
                     hours, remainder = divmod(diff.seconds, 3600)
                     minutes, _ = divmod(remainder, 60)
                     duration_str = f"{days}d {hours}h {minutes}m"
-                except Exception:
+                except:
                     duration_str = "N/A"
 
-        data.append({
-            "Project": enriched["project_name"] or "General",
-            "Task Title": t.title,
-            "Description": t.description or "",
-            "Assignee": enriched["assigned_user_name"] or f"ID: {t.assigned_user}",
-            "Assigned By": enriched["assigned_by_name"] or "",
-            "Status": t.status.value if hasattr(t.status, 'value') else str(t.status),
-            "Due Date": t.due_date.strftime("%Y-%m-%d %H:%M") if t.due_date else "N/A",
-            "Created At": t.created_at.strftime("%Y-%m-%d %H:%M") if t.created_at else "N/A",
-            "Started At": t.started_at.strftime("%Y-%m-%d %H:%M") if t.started_at else "N/A",
-            "Completed At": t.completed_at.strftime("%Y-%m-%d %H:%M") if t.completed_at else "N/A",
-            "Duration": duration_str,
-            "Completion Notes": t.completion_notes or ""
-        })
+        row = [
+            enriched["project_name"] or "General",
+            t.title,
+            t.description or "",
+            enriched["assigned_user_name"] or f"ID: {t.assigned_user}",
+            enriched["assigned_by_name"] or "",
+            t.status.value if hasattr(t.status, 'value') else str(t.status),
+            t.due_date.strftime("%Y-%m-%d %H:%M") if t.due_date else "N/A",
+            t.created_at.strftime("%Y-%m-%d %H:%M") if t.created_at else "N/A",
+            t.started_at.strftime("%Y-%m-%d %H:%M") if t.started_at else "N/A",
+            t.completed_at.strftime("%Y-%m-%d %H:%M") if t.completed_at else "N/A",
+            duration_str,
+            t.completion_notes or ""
+        ]
+        ws.append(row)
 
-    df = pd.DataFrame(data)
-    
-    # Create Excel in memory
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Tasks Report')
-    
+    wb.save(output)
     output.seek(0)
     
     filename = f"tasks_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
