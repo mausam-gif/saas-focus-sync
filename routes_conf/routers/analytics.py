@@ -144,3 +144,64 @@ def calculate_all_kpis(
     from routes_conf.routers.kpi_forms import sync_all_kpis
     sync_all_kpis(db)
     return {"message": "All metrics calculated successfully"}
+@router.get("/dashboard-full")
+def get_full_dashboard_data(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Consolidated endpoint for all dashboard data to eliminate network waterfall.
+    Returns summary, projects, users, tasks, metrics, questions, and clients in one go.
+    """
+    org_id = current_user.organization_id
+    
+    # 1. Reuse summary logic
+    from sqlalchemy import select
+    summary_data = db.execute(select(
+        func.count(User.id).filter(User.role == UserRole.EMPLOYEE).label("employee_count"),
+        select(func.count(Project.id)).where(Project.organization_id == org_id).scalar_subquery().label("project_count"),
+        select(func.count(Project.id)).where(Project.organization_id == org_id, Project.status != "COMPLETED").scalar_subquery().label("active_projects"),
+        select(func.count(Task.id)).join(User, Task.assigned_user == User.id).where(User.organization_id == org_id, Task.status != "DONE").scalar_subquery().label("pending_tasks"),
+        func.avg(KPIMetric.productivity_score).label("avg_prod"),
+        func.avg(KPIMetric.task_completion_rate).label("avg_comp"),
+        func.avg(KPIMetric.efficiency_score).label("avg_eff")
+    ).select_from(User).outerjoin(KPIMetric, User.id == KPIMetric.employee_id).where(User.organization_id == org_id)).first()
+
+    summary = {
+        "employee_count": summary_data.employee_count or 0,
+        "project_count": summary_data.project_count or 0,
+        "active_project_count": summary_data.active_projects or 0,
+        "pending_tasks_count": summary_data.pending_tasks or 0,
+        "avg_productivity": round(summary_data.avg_prod or 0, 1),
+        "avg_completion": round(summary_data.avg_comp or 0, 1),
+        "avg_efficiency": round(summary_data.avg_eff or 0, 1)
+    }
+
+    # 2. Fetch all other entities in parallel (SQLAlchemy handles this efficiently)
+    projects = db.query(Project).filter(Project.organization_id == org_id).all()
+    users = db.query(User).filter(User.organization_id == org_id).all()
+    
+    # Tasks where user is in org
+    tasks = db.query(Task).join(User, Task.assigned_user == User.id).filter(User.organization_id == org_id).order_by(Task.created_at.desc()).limit(10).all()
+    
+    # KPI Metrics
+    metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(User.organization_id == org_id).all()
+    
+    # Clients
+    from db.models import Client
+    clients = db.query(Client).filter(Client.organization_id == org_id).all()
+
+    # Questions
+    from db.models import Question
+    questions = db.query(Question).join(User, Question.target_employee == User.id).filter(User.organization_id == org_id).all()
+
+    # Format result
+    return {
+        "summary": summary,
+        "projects": projects,
+        "users": users,
+        "tasks": tasks,
+        "metrics": metrics,
+        "clients": clients,
+        "questions": questions
+    }

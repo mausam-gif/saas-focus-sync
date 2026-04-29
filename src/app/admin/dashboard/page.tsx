@@ -55,37 +55,20 @@ export default function AdminDashboard() {
         if (!user) return;
         setLoading(true);
         try {
-            // PHASE 1: Urgent Data (Summary Stats)
-            const summaryRes = await api.get('analytics/summary');
-            const summaryData = summaryRes.data || {};
+            // PHASE 1: Combined High-Performance Data Fetch
+            const res = await api.get('analytics/dashboard-full');
+            const data = res.data;
+            const summary = data.summary || {};
 
+            // 1. Set Stats
             setStats({
-                employees: summaryData.employee_count || 0,
-                projects: summaryData.active_project_count || 0,
-                avgProductivity: summaryData.avg_productivity || 0,
+                employees: summary.employee_count || 0,
+                projects: summary.active_project_count || 0,
+                avgProductivity: summary.avg_productivity || 0,
             });
 
-            setLoading(false);
-
-            // PHASE 2: Background Data (Heavy Charts & Lists)
-            const [
-                projectsRes,
-                usersRes,
-                tasksAssigned,
-                metricsRes,
-                questionsRes,
-                clientsRes
-            ] = await Promise.all([
-                api.get('projects/').catch(() => ({ data: [] })),
-                api.get('users/').catch(() => ({ data: [] })),
-                api.get('tasks/').catch(() => ({ data: [] })),
-                api.get('analytics/').catch(() => ({ data: [] })),
-                api.get('questions/').catch(() => ({ data: [] })),
-                api.get('clients/').catch(() => ({ data: [] }))
-            ]);
-
-            // 1. Process Projects & Gantt
-            const projectData = projectsRes.data || [];
+            // 2. Process Projects & Gantt
+            const projectData = data.projects || [];
             setProjects(projectData);
             const fetchedTasks = projectData.map((p: any) => {
                 let progress = 20;
@@ -107,30 +90,19 @@ export default function AdminDashboard() {
             });
             setTasks(fetchedTasks);
 
-            // 2. Process Users & Team
-            const userData = usersRes.data || [];
+            // 3. Process Users & Team
+            const userData = data.users || [];
             const allEmployees = userData.filter((u: any) => u.role.toUpperCase() === 'EMPLOYEE');
             const allManagers = userData.filter((u: any) => u.role.toUpperCase() === 'MANAGER');
             setManagers(allManagers);
             setTeam(allEmployees);
             setAllUsers(userData.filter((u: any) => u.id !== user?.id));
 
-            // 3. Set Tasks & Metrics
-            setSentTasks(tasksAssigned.data || []);
-            setKpiMetrics(metricsRes.data || []);
-
-            // 4. Set Stats from Optimized Summary
-            if (summaryRes && summaryRes.data) {
-                setStats({
-                    employees: summaryRes.data.employee_count || 0,
-                    projects: summaryRes.data.active_project_count || 0,
-                    avgProductivity: summaryRes.data.avg_productivity || 0
-                });
-            }
-
-            // 5. Set Questions & Clients
-            setQuestions(questionsRes.data || []);
-            setClients(clientsRes.data || []);
+            // 4. Set Tasks & Metrics & Clients & Questions
+            setSentTasks(data.tasks || []);
+            setKpiMetrics(data.metrics || []);
+            setQuestions(data.questions || []);
+            setClients(data.clients || []);
 
         } catch (error) {
             console.error("Failed to load dashboard data", error);
