@@ -51,9 +51,6 @@ from core.config import settings
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
-def root(db: Session = Depends(deps.get_db)):
-    from db.models import User
-    user2 = db.query(User).filter(User.id == 2).first()
-    org_id = user2.organization_id if user2 else "User not found"
-    return {"message": "Vast Focus Sync API - ONLINE", "status": "ok", "user2_org_id": org_id, "user2_role": user2.role if user2 else None}
+def root():
+    return {"message": "Vast Focus Sync API - ONLINE", "status": "ok"}
 
