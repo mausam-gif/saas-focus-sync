@@ -62,7 +62,16 @@ def get_dashboard_summary(
 ) -> Any:
     """
     Enterprise Health Index: Optimized for millisecond performance.
+    Includes emergency auto-migration for missing columns.
     """
+    # 0. Emergency Migration (One-time check)
+    try:
+        db.execute(text("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'taskpriority') THEN CREATE TYPE taskpriority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL'); END IF; END $$;"))
+        db.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority taskpriority DEFAULT 'MEDIUM' NOT NULL;"))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     org_id = current_user.organization_id
     
     # 1. Fetch only necessary scores (Optimized)
