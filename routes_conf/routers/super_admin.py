@@ -188,18 +188,36 @@ def delete_step_automation(
 @router.post("/migrate-db-dynamic")
 def migrate_db_dynamic(
     db: Session = Depends(deps.get_db),
-    # Temporarily disabled auth to fix "chicken and egg" login crash
-    # current_user: User = Depends(deps.get_current_active_super_admin),
 ):
     """Temporary endpoint to add missing columns to production DB."""
     from sqlalchemy import text
+    import logging
+    logger = logging.getLogger("uvicorn.error")
+    
     try:
+        # Test connection
+        db.execute(text("SELECT 1"))
+        logger.info("Database connection verified.")
+        
+        results = []
+        
         # Add unit_id to users
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER REFERENCES organization_units(id)"))
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN unit_id INTEGER"))
+            results.append("Added unit_id to users")
+        except Exception as e:
+            results.append(f"unit_id error: {str(e)}")
+            
         # Add project_step_id to projects
-        db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER REFERENCES project_steps(id)"))
+        try:
+            db.execute(text("ALTER TABLE projects ADD COLUMN project_step_id INTEGER"))
+            results.append("Added project_step_id to projects")
+        except Exception as e:
+            results.append(f"project_step_id error: {str(e)}")
+            
         db.commit()
-        return {"status": "success", "message": "Columns added successfully"}
+        return {"status": "success", "results": results}
     except Exception as e:
         db.rollback()
+        logger.error(f"Migration crash: {str(e)}")
         return {"status": "error", "message": str(e)}
