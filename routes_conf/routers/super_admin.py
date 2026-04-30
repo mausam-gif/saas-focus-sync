@@ -77,6 +77,8 @@ def update_organization(
 
 # --- Dynamic Settings Endpoints ---
 
+from fastapi.encoders import jsonable_encoder
+
 @router.get("/organizations/{org_id}/settings")
 def get_organization_settings(
     org_id: int,
@@ -87,6 +89,7 @@ def get_organization_settings(
     # Security: Only SuperAdmin OR members of that organization can see settings
     if current_user.role != UserRole.SUPER_ADMIN and current_user.organization_id != org_id:
         raise HTTPException(status_code=403, detail="Not authorized to view these settings")
+    
     units = db.query(OrganizationUnit).filter(OrganizationUnit.organization_id == org_id).all()
     steps = db.query(ProjectStep).filter(ProjectStep.organization_id == org_id).order_by(ProjectStep.order).all()
     
@@ -99,13 +102,13 @@ def get_organization_settings(
             "name": step.name,
             "color": step.color,
             "order": step.order,
-            "automations": autos
+            "automations": jsonable_encoder(autos)
         })
         
-    return {
+    return jsonable_encoder({
         "units": units,
         "steps": enriched_steps
-    }
+    })
 
 @router.post("/organizations/{org_id}/units")
 def add_organization_unit(
