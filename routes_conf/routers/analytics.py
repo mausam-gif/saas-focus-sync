@@ -1,9 +1,10 @@
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, text
 from routes_conf import deps
 from db.models import KPIMetric, Task, User, TaskStatus, UserRole, Project
+from db.session import engine
 from pydantic import BaseModel
 
 class KPIMetricResponse(BaseModel):
