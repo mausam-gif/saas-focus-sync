@@ -21,6 +21,7 @@ export default function ProjectsPage() {
     const router = useRouter();
     const [projects, setProjects] = useState<any[]>([]);
     const [clients, setClients] = useState<any[]>([]);
+    const [orgSettings, setOrgSettings] = useState<any>({ units: [], steps: [] });
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
@@ -63,23 +64,17 @@ export default function ProjectsPage() {
     useEffect(() => {
         if (!authLoading && !user) { router.push('/login'); return; }
         if (authLoading || !user) return;
-
-        // 1. Instant Load from Cache (SWR Pattern)
-        const cacheKey = `projects_data_${user.id}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
-        if (cachedData) {
-            try {
-                const parsed = JSON.parse(cachedData);
-                setProjects(parsed.projects || []);
-                setClients(parsed.clients || []);
-                setLoading(false); // Immediate transition to content
-            } catch (e) {
-                console.error("Cache parse error", e);
-            }
-        }
-
         fetchProjects();
+        fetchOrgSettings();
     }, [user, authLoading, router]);
+
+    const fetchOrgSettings = async () => {
+        if (!user?.organization_id) return;
+        try {
+            const res = await api.get(`super-admin/organizations/${user.organization_id}/settings`);
+            setOrgSettings(res.data);
+        } catch (err) { console.error(err); }
+    };
 
     const fetchProjects = async () => {
         if (!user) return;
@@ -342,16 +337,21 @@ export default function ProjectsPage() {
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Update Progress</p>
                                                 <select
-                                                    value={p.status || 'ANALYSIS'}
+                                                    value={p.status}
                                                     disabled={statusUpdating === p.id}
                                                     onChange={(e) => handleStatusUpdate(p.id, e.target.value)}
-                                                    className={`text-[11px] font-bold px-3 py-1.5 rounded-xl border-2 outline-none cursor-pointer transition-all shadow-sm ${STATUS_STYLES[p.status] || STATUS_STYLES['ANALYSIS']}`}
+                                                    className="text-[11px] font-bold px-3 py-1.5 rounded-xl border-2 outline-none cursor-pointer transition-all shadow-sm"
+                                                    style={{ 
+                                                        borderColor: orgSettings.steps.find((s:any) => s.name === p.status)?.color || '#e5e7eb',
+                                                        backgroundColor: (orgSettings.steps.find((s:any) => s.name === p.status)?.color || '#e5e7eb') + '15',
+                                                        color: orgSettings.steps.find((s:any) => s.name === p.status)?.color || '#374151'
+                                                    }}
                                                 >
-                                                    <option value="ANALYSIS">ANALYSIS</option>
-                                                    <option value="STRATEGY">STRATEGY</option>
-                                                    <option value="EXECUTION">EXECUTION</option>
-                                                    <option value="ITERATION">ITERATION</option>
-                                                    <option value="EVALUATION">EVALUATION</option>
+                                                    {orgSettings.steps.map((s: any) => (
+                                                        <option key={s.id} value={s.name}>{s.name}</option>
+                                                    ))}
+                                                    {/* Fallback for legacy data */}
+                                                    {!orgSettings.steps.find((s:any) => s.name === p.status) && <option value={p.status}>{p.status}</option>}
                                                 </select>
                                             </div>
                                         </div>
@@ -524,11 +524,9 @@ export default function ProjectsPage() {
                                         <select value={editForm.status}
                                             onChange={e => setEditForm({ ...editForm, status: e.target.value })}
                                             className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-black">
-                                            <option value="ANALYSIS">ANALYSIS</option>
-                                            <option value="STRATEGY">STRATEGY</option>
-                                            <option value="EXECUTION">EXECUTION</option>
-                                            <option value="ITERATION">ITERATION</option>
-                                            <option value="EVALUATION">EVALUATION</option>
+                                            {orgSettings.steps.map((s: any) => (
+                                                <option key={s.id} value={s.name}>{s.name}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div>

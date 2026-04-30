@@ -23,6 +23,7 @@ export default function TeamPage() {
         location: '',
         designation: ''
     });
+    const [orgSettings, setOrgSettings] = useState<any>({ units: [], steps: [] });
     const [submitStatus, setSubmitStatus] = useState({ loading: false, error: '', success: '' });
 
     useEffect(() => {
@@ -46,7 +47,16 @@ export default function TeamPage() {
         }
 
         fetchUsers();
+        fetchOrgSettings();
     }, [user, authLoading, router]);
+
+    const fetchOrgSettings = async () => {
+        if (!user?.organization_id) return;
+        try {
+            const res = await api.get(`super-admin/organizations/${user.organization_id}/settings`);
+            setOrgSettings(res.data);
+        } catch (err) { console.error(err); }
+    };
 
     const handleDeleteUser = async (id: number) => {
         if (!confirm('Are you sure you want to delete this user?')) return;
@@ -297,10 +307,9 @@ export default function TeamPage() {
                                 className="w-full border border-gray-200 text-black font-medium bg-white rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                             >
                                 <option value="">Select Unit</option>
-                                <option value="PRODUCTION">Production Unit</option>
-                                <option value="CREATIVE_AND_STRATEGY">Creative & Strategy</option>
-                                <option value="GROWTH_AND_ENGAGEMENT">Growth & Engagement</option>
-                                <option value="TEAM_DEVELOPMENT">Team Development</option>
+                                {orgSettings.units.map((u: any) => (
+                                    <option key={u.id} value={u.name}>{u.name}</option>
+                                ))}
                             </select>
                         </div>
 

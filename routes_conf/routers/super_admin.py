@@ -81,9 +81,12 @@ def update_organization(
 def get_organization_settings(
     org_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_super_admin),
+    current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """Get all dynamic settings for an organization."""
+    # Security: Only SuperAdmin OR members of that organization can see settings
+    if current_user.role != UserRole.SUPER_ADMIN and current_user.organization_id != org_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view these settings")
     units = db.query(OrganizationUnit).filter(OrganizationUnit.organization_id == org_id).all()
     steps = db.query(ProjectStep).filter(ProjectStep.organization_id == org_id).order_by(ProjectStep.order).all()
     
