@@ -185,39 +185,58 @@ def delete_step_automation(
         db.commit()
     return {"message": "Deleted"}
 
-@router.post("/migrate-db-dynamic")
-def migrate_db_dynamic(
+@router.put("/units/{unit_id}")
+def update_unit(
+    unit_id: int,
+    name: str,
     db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
 ):
-    """Temporary endpoint to add missing columns to production DB."""
-    from sqlalchemy import text
-    import logging
-    logger = logging.getLogger("uvicorn.error")
-    
-    try:
-        # Test connection
-        db.execute(text("SELECT 1"))
-        logger.info("Database connection verified.")
-        
-        results = []
-        
-        # Add unit_id to users
-        try:
-            db.execute(text("ALTER TABLE users ADD COLUMN unit_id INTEGER"))
-            results.append("Added unit_id to users")
-        except Exception as e:
-            results.append(f"unit_id error: {str(e)}")
-            
-        # Add project_step_id to projects
-        try:
-            db.execute(text("ALTER TABLE projects ADD COLUMN project_step_id INTEGER"))
-            results.append("Added project_step_id to projects")
-        except Exception as e:
-            results.append(f"project_step_id error: {str(e)}")
-            
-        db.commit()
-        return {"status": "success", "results": results}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Migration crash: {str(e)}")
-        return {"status": "error", "message": str(e)}
+    unit = db.query(OrganizationUnit).get(unit_id)
+    if not unit: raise HTTPException(404, "Not found")
+    unit.name = name
+    db.commit()
+    return unit
+
+@router.put("/steps/{step_id}")
+def update_step(
+    step_id: int,
+    name: Optional[str] = None,
+    color: Optional[str] = None,
+    order: Optional[int] = None,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    step = db.query(ProjectStep).get(step_id)
+    if not step: raise HTTPException(404, "Not found")
+    if name: step.name = name
+    if color: step.color = color
+    if order is not None: step.order = order
+    db.commit()
+    return step
+
+@router.put("/automations/{auto_id}")
+def update_automation(
+    auto_id: int,
+    designation: Optional[str] = None,
+    task_title: Optional[str] = None,
+    task_description: Optional[str] = None,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    auto = db.query(StepAutomation).get(auto_id)
+    if not auto: raise HTTPException(404, "Not found")
+    if designation: auto.designation = designation
+    if task_title: auto.task_title = task_title
+    if task_description: auto.task_description = task_description
+    db.commit()
+    return auto
+
+@router.get("/designations")
+def get_all_designations(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    """Get all unique designations used in the system."""
+    res = db.query(User.designation).filter(User.designation != None).distinct().all()
+    return [r[0] for r in res]

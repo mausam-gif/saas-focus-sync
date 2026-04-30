@@ -31,14 +31,26 @@ export default function SuperAdminDashboard() {
     const [newStepName, setNewStepName] = React.useState('');
     const [newStepColor, setNewStepColor] = React.useState('#4F46E5');
     const [newAuto, setNewAuto] = React.useState({ stepId: 0, designation: '', title: '', desc: '' });
+    const [designations, setDesignations] = React.useState<string[]>([]);
+    const [editingItem, setEditingItem] = React.useState<{type: 'unit' | 'step' | 'auto', id: number, val: any} | null>(null);
 
     React.useEffect(() => {
         if (!authLoading && (!user || user.role !== 'SUPER_ADMIN')) {
             router.push('/login');
             return;
         }
-        if (user) fetchOrganizations();
+        if (user?.role === 'SUPER_ADMIN') {
+            fetchOrganizations();
+            fetchDesignations();
+        }
     }, [user, authLoading]);
+
+    const fetchDesignations = async () => {
+        try {
+            const res = await api.get('super-admin/designations');
+            setDesignations(res.data);
+        } catch (err) { console.error(err); }
+    };
 
     const fetchOrganizations = async () => {
         try {
@@ -156,6 +168,47 @@ export default function SuperAdminDashboard() {
             await api.delete(`super-admin/automations/${id}`);
             fetchSettings(selectedOrg.id);
         } catch (err) { alert("Failed to delete"); }
+    };
+
+    const handleUpdateUnit = async (id: number, name: string) => {
+        try {
+            await api.put(`super-admin/units/${id}`, null, { params: { name } });
+            setEditingItem(null);
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Update failed"); }
+    };
+
+    const handleUpdateStep = async (id: number, data: any) => {
+        try {
+            await api.put(`super-admin/steps/${id}`, null, { params: data });
+            setEditingItem(null);
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Update failed"); }
+    };
+
+    const handleLoadDefaults = async () => {
+        if (!confirm("Load standard project steps and departments?")) return;
+        try {
+            // Seed Units
+            const defaultUnits = ["Creative", "Production", "Marketing", "HR", "Sales"];
+            for (const name of defaultUnits) {
+                await api.post(`super-admin/organizations/${selectedOrg.id}/units`, null, { params: { name } });
+            }
+            // Seed Steps
+            const defaultSteps = [
+                { name: "Briefing", color: "#6366F1" },
+                { name: "Pre-Production", color: "#8B5CF6" },
+                { name: "Production", color: "#EC4899" },
+                { name: "Post-Production", color: "#F59E0B" },
+                { name: "Final Delivery", color: "#10B981" }
+            ];
+            for (let i = 0; i < defaultSteps.length; i++) {
+                await api.post(`super-admin/organizations/${selectedOrg.id}/steps`, null, { 
+                    params: { ...defaultSteps[i], order: i } 
+                });
+            }
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Failed to load defaults"); }
     };
 
     if (authLoading || loading) return <div className="flex items-center justify-center h-screen">Loading Master Dashboard...</div>;
@@ -407,7 +460,9 @@ export default function SuperAdminDashboard() {
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Team Departments</h3>
-                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">{orgSettings.units.length} ACTIVE</span>
+                                        <button onClick={handleLoadDefaults} className="text-[10px] font-bold text-indigo-500 hover:underline">
+                                            LOAD SYSTEM DEFAULTS
+                                        </button>
                                     </div>
                                     <div className="flex space-x-2">
                                         <input type="text" value={newUnitName} onChange={e => setNewUnitName(e.target.value)}
@@ -420,7 +475,18 @@ export default function SuperAdminDashboard() {
                                     <div className="grid grid-cols-2 gap-3">
                                         {orgSettings.units.map((u: any) => (
                                             <div key={u.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl group hover:border-indigo-200 transition-all">
-                                                <span className="text-sm font-bold text-gray-700">{u.name}</span>
+                                                {editingItem?.type === 'unit' && editingItem.id === u.id ? (
+                                                    <input autoFocus value={editingItem.val} 
+                                                        onChange={e => setEditingItem({...editingItem, val: e.target.value})}
+                                                        onBlur={() => handleUpdateUnit(u.id, editingItem.val)}
+                                                        onKeyDown={e => e.key === 'Enter' && handleUpdateUnit(u.id, editingItem.val)}
+                                                        className="text-sm font-bold text-gray-700 bg-gray-50 rounded px-2 py-1 outline-none w-full" />
+                                                ) : (
+                                                    <span onClick={() => setEditingItem({type: 'unit', id: u.id, val: u.name})} 
+                                                        className="text-sm font-bold text-gray-700 cursor-pointer hover:text-indigo-600">
+                                                        {u.name}
+                                                    </span>
+                                                )}
                                                 <button onClick={() => handleDeleteUnit(u.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -451,9 +517,22 @@ export default function SuperAdminDashboard() {
                                         {orgSettings.steps.map((step: any) => (
                                             <div key={step.id} className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
                                                 <div className="p-4 flex items-center justify-between" style={{ borderLeft: `6px solid ${step.color}` }}>
-                                                    <div>
+                                                    <div className="flex-1">
                                                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-0.5">Stage {step.order + 1}</p>
-                                                        <h4 className="font-black text-gray-900">{step.name}</h4>
+                                                        {editingItem?.type === 'step' && editingItem.id === step.id ? (
+                                                            <div className="flex items-center space-x-2">
+                                                                <input autoFocus value={editingItem.val.name} 
+                                                                    onChange={e => setEditingItem({...editingItem, val: {...editingItem.val, name: e.target.value}})}
+                                                                    className="font-black text-gray-900 bg-gray-50 rounded px-2 py-1 outline-none" />
+                                                                <input type="color" value={editingItem.val.color} 
+                                                                    onChange={e => setEditingItem({...editingItem, val: {...editingItem.val, color: e.target.value}})}
+                                                                    className="w-8 h-8 rounded cursor-pointer" />
+                                                                <button onClick={() => handleUpdateStep(step.id, editingItem.val)} className="text-indigo-600 font-bold text-xs">SAVE</button>
+                                                            </div>
+                                                        ) : (
+                                                            <h4 onClick={() => setEditingItem({type: 'step', id: step.id, val: {name: step.name, color: step.color}})} 
+                                                                className="font-black text-gray-900 cursor-pointer hover:text-indigo-600">{step.name}</h4>
+                                                        )}
                                                     </div>
                                                     <button onClick={() => handleDeleteStep(step.id)} className="p-2 text-gray-300 hover:text-red-500">
                                                         <Trash2 className="w-4 h-4" />
@@ -477,15 +556,24 @@ export default function SuperAdminDashboard() {
                                                     {/* Add Automation Sub-form */}
                                                     <div className="bg-white p-3 rounded-xl border border-dashed border-gray-200 space-y-2">
                                                         <div className="grid grid-cols-2 gap-2">
-                                                            <input type="text" placeholder="Designation" value={newAuto.stepId === step.id ? newAuto.designation : ''}
+                                                            <select value={newAuto.stepId === step.id ? newAuto.designation : ''}
                                                                 onChange={e => setNewAuto({...newAuto, stepId: step.id, designation: e.target.value})}
-                                                                className="text-[10px] p-1.5 border-b border-gray-100 outline-none" />
-                                                            <input type="text" placeholder="Task Title" value={newAuto.stepId === step.id ? newAuto.title : ''}
+                                                                className="text-[10px] p-1.5 border-b border-gray-100 outline-none bg-transparent">
+                                                                <option value="">Select Designation</option>
+                                                                {designations.map(d => <option key={d} value={d}>{d}</option>)}
+                                                                <option value="CUSTOM">+ Add Custom</option>
+                                                            </select>
+                                                            {newAuto.designation === 'CUSTOM' && (
+                                                                <input type="text" placeholder="Custom Designation" 
+                                                                    onBlur={e => setNewAuto({...newAuto, designation: e.target.value})}
+                                                                    className="text-[10px] p-1.5 border-b border-gray-100 outline-none" />
+                                                            )}
+                                                            <input type="text" placeholder="Task Title (e.g. Upload Files)" value={newAuto.stepId === step.id ? newAuto.title : ''}
                                                                 onChange={e => setNewAuto({...newAuto, stepId: step.id, title: e.target.value})}
                                                                 className="text-[10px] p-1.5 border-b border-gray-100 outline-none" />
                                                         </div>
                                                         <button onClick={() => handleAddAuto(step.id)} className="w-full text-[10px] font-black text-indigo-600 hover:bg-indigo-50 py-1 rounded transition-colors">
-                                                            + Add Auto-Task
+                                                            + Set Automatic Task Rule
                                                         </button>
                                                     </div>
                                                 </div>
