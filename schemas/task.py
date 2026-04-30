@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from db.models import TaskStatus
+from db.models import TaskStatus, TaskPriority
 
 class TaskBase(BaseModel):
     title: str
@@ -10,6 +10,7 @@ class TaskBase(BaseModel):
     assigned_user: int
     due_date: Optional[datetime] = None
     status: TaskStatus = TaskStatus.TODO
+    priority: TaskPriority = TaskPriority.MEDIUM
     progress: int = 0
 
 class TaskCreate(TaskBase):
@@ -19,6 +20,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
     progress: Optional[int] = None
     assigned_user: Optional[int] = None
     completion_notes: Optional[str] = None
@@ -32,6 +34,7 @@ class TaskResponse(BaseModel):
     assigned_by: Optional[int] = None
     due_date: Optional[datetime] = None
     status: TaskStatus
+    priority: TaskPriority
     progress: int
     completed_at: Optional[datetime] = None
     started_at: Optional[datetime] = None

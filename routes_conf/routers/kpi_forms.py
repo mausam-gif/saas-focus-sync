@@ -23,7 +23,7 @@ router = APIRouter()
 def normalize_answer(question_type: str, numeric_value: Optional[float]) -> float:
     """Normalize any answer to a 0–100 scale."""
     if numeric_value is None:
-        return 50.0  # Default midpoint for text answers
+        return None  # Changed from 50.0 to None to allow exclusion
     if question_type == "RATING":
         return (numeric_value / 10.0) * 100
     if question_type == "PERCENTAGE":
@@ -31,119 +31,162 @@ def normalize_answer(question_type: str, numeric_value: Optional[float]) -> floa
     if question_type == "NUMERIC":
         return min(numeric_value, 100)
     if question_type == "MULTIPLE_CHOICE":
-        # 0 = No issues (100), 1 = Minor (50), 2 = Major (0) or direct numeric
         return numeric_value
-    return 50.0
+    return None
 
-def calculate_kpi_score(responses: list, questions: list) -> float:
-    """Calculate weighted KPI score from 0–100."""
+def calculate_kpi_score(responses: list, questions: list) -> Optional[float]:
+    """Calculate weighted KPI score from 0–100. Returns None if no rated questions."""
     question_map = {q.id: q for q in questions}
-    total_weight = sum(q.weight for q in questions)
-    if total_weight == 0:
-        return 0.0
-
-    score = 0.0
+    total_weight = 0.0
+    weighted_sum = 0.0
+    
     for response in responses:
         question = question_map.get(response.question_id)
         if question:
             normalized = normalize_answer(question.question_type.value, response.numeric_value)
-            score += normalized * (question.weight / total_weight)
+            if normalized is not None:
+                weighted_sum += normalized * question.weight
+                total_weight += question.weight
 
-    return round(min(max(score, 0), 100), 2)
+    if total_weight == 0:
+        return None
+        
+    return round(min(max(weighted_sum / total_weight, 0), 100), 2)
+
+def get_lateness_penalty(due_date: datetime, completion_date: datetime) -> float:
+    """Calculate severity-based lateness penalty."""
+    if not due_date or not completion_date: return 0.0
+    if completion_date <= due_date: return 0.0
+    
+    delay = completion_date - due_date
+    if delay <= timedelta(hours=24): return 3.0
+    if delay <= timedelta(days=7): return 6.0
+    return 8.0
+
+def get_decay_multiplier(event_date: datetime, now: datetime) -> float:
+    """Linear decay function: penalty * (1 - days_elapsed / 30)."""
+    if not event_date: return 0.0
+    days_elapsed = (now - event_date).total_seconds() / (24 * 3600)
+    if days_elapsed >= 30: return 0.0
+    return 1.0 - (days_elapsed / 30.0)
+
+def get_priority_multiplier(priority: str) -> float:
+    """Priority-based penalty multipliers."""
+    multipliers = {
+        "LOW": 0.5,
+        "MEDIUM": 1.0,
+        "HIGH": 1.5,
+        "CRITICAL": 2.0
+    }
+    return multipliers.get(priority.upper(), 1.0)
 
 def sync_kpi_scores(db: Session, employee_id: int) -> float:
-    """Recalculate total KPI score combining Forms (40%), Tasks (40%), and Projects (20%)."""
-    # Use naive local time to match the naive timestamps stored by datetime-local inputs
+    """Enterprise KPI Sync: Proportional, Severity-aware, and Rewarding."""
     now = datetime.now()
     
-    # Comparison safety for naive/aware datetimes (Standardize to naive for local comparison)
-    def safe_compare_gt(dt1, dt2):
-        if not dt1 or not dt2: return False
-        d1 = dt1.replace(tzinfo=None) if hasattr(dt1, "tzinfo") else dt1
-        d2 = dt2.replace(tzinfo=None) if hasattr(dt2, "tzinfo") else dt2
-        res = d1 > d2
-        if not res: # Only print if it fails our expectation (optional)
-             pass
-        return res
-
-    def safe_compare_lt(dt1, dt2):
-        if not dt1 or not dt2: return False
-        d1 = dt1.replace(tzinfo=None) if hasattr(dt1, "tzinfo") else dt1
-        d2 = dt2.replace(tzinfo=None) if hasattr(dt2, "tzinfo") else dt2
-        return d1 < d2
-
-    # 1. Form Score (40% weight)
-    form_scores = db.query(KPIScore).filter(KPIScore.employee_id == employee_id).all()
-    avg_form_score = sum(s.score for s in form_scores) / len(form_scores) if form_scores else 100.0
-    
-    # 2. Task Performance (40% weight)
+    # 1. Fetch Workload
     tasks = db.query(Task).filter(Task.assigned_user == employee_id).all()
-    task_score = 100.0
-    completion_rate = 100.0
-    if tasks:
-        # Rolling window for recovery (30 days)
-        cutoff_date = now - timedelta(days=30)
-
-        completed = [t for t in tasks if t.status == TaskStatus.DONE]
-        # Only penalize late tasks completed in the last 30 days
-        late_completed_recent = [t for t in tasks if t.status == TaskStatus.DONE and safe_compare_gt(t.completed_at, t.due_date) and safe_compare_gt(t.completed_at, cutoff_date)]
-        # All currently overdue pending tasks count
-        overdue_pending = [t for t in tasks if t.status != TaskStatus.DONE and safe_compare_lt(t.due_date, now)]
-        
-        # Absolute Deduction Model (Rolling):
-        # -10 for each current overdue pending task (Huge decrement)
-        # -8 for each late completed task in last 30 days (Very small recovery: +2 increment)
-        deductions = (len(overdue_pending) * 10) + (len(late_completed_recent) * 8)
-        task_score = max(0, 100.0 - deductions)
-        completion_rate = (len(completed) / len(tasks)) * 100 if tasks else 100
-
-    # 3. Project Submission Performance (20% weight)
     project_ids = db.query(Task.project_id).filter(Task.assigned_user == employee_id, Task.project_id != None).distinct().all()
     project_ids = [p[0] for p in project_ids]
-    project_score = 100.0
     
-    if project_ids:
-        project_deductions = 0
-        cutoff_date = now - timedelta(days=30)
-        for pid in project_ids:
-            project = db.query(Project).filter(Project.id == pid).first()
-            if not project: continue
-            
-            submission = db.query(WorkSubmission).filter(
-                WorkSubmission.employee_id == employee_id,
-                WorkSubmission.project_id == pid
-            ).order_by(WorkSubmission.timestamp.desc()).first()
-            
-            if not submission:
-                if safe_compare_lt(project.deadline, now):
-                    project_deductions += 15 # Huge penalty for missing submission
-            else:
-                # Only penalize late submissions if they were in the last 30 days
-                if safe_compare_gt(submission.timestamp, project.deadline):
-                    if safe_compare_gt(submission.timestamp, cutoff_date):
-                        project_deductions += 13 # Very small recovery: +2 increment (from -15)
-        
-        project_score = max(0, 100.0 - project_deductions)
+    # Zero-Workload Rule
+    if not tasks and not project_ids:
+        # Update metric to null/0 to indicate insufficient data
+        metric = db.query(KPIMetric).filter(KPIMetric.employee_id == employee_id).first()
+        if metric:
+            metric.productivity_score = 0.0 # Will show as 0 in UI or handle as 'Insufficient Data'
+            db.commit()
+        return 0.0
 
-    # 4. Final Weighted Total (60% Task, 20% Project, 20% Form)
-    total_score = (task_score * 0.6) + (project_score * 0.2) + (avg_form_score * 0.2)
-    total_score = round(total_score, 1)
+    # 2. Task Score Calculation (Volume Normalized)
+    task_points = 100.0
+    total_deductions = 0.0
+    total_bonuses = 0.0
     
-    # Update KPIMetric table
+    # Work volume for normalization
+    work_volume = sum(get_priority_multiplier(t.priority.value if hasattr(t.priority, 'value') else t.priority) for t in tasks) if tasks else 1.0
+    
+    streak_days = 0
+    has_failed_recently = False
+    
+    for t in tasks:
+        p_mult = get_priority_multiplier(t.priority.value if hasattr(t.priority, 'value') else t.priority)
+        
+        # Penalties
+        if t.status == TaskStatus.DONE:
+            if t.completed_at and t.due_date and t.completed_at > t.due_date:
+                base_penalty = get_lateness_penalty(t.due_date, t.completed_at)
+                decay = get_decay_multiplier(t.completed_at, now)
+                total_deductions += base_penalty * p_mult * decay
+                if (now - t.completed_at).days < 30: has_failed_recently = True
+            elif t.completed_at and t.due_date and t.completed_at < t.due_date - timedelta(hours=24):
+                # Positive Reinforcement: Early delivery bonus
+                total_bonuses += 2.0 * p_mult
+        else:
+            if t.due_date and t.due_date < now:
+                # Overdue Pending: Fixed heavy penalty until resolved
+                total_deductions += 10.0 * p_mult
+                has_failed_recently = True
+
+    # 3. Project Score Calculation
+    project_points = 100.0
+    project_deductions = 0.0
+    
+    for pid in project_ids:
+        project = db.query(Project).filter(Project.id == pid).first()
+        if not project: continue
+        
+        submission = db.query(WorkSubmission).filter(
+            WorkSubmission.employee_id == employee_id,
+            WorkSubmission.project_id == pid
+        ).order_by(WorkSubmission.timestamp.desc()).first()
+        
+        if not submission:
+            if project.deadline and project.deadline < now:
+                project_deductions += 15.0
+                has_failed_recently = True
+        else:
+            if submission.timestamp and project.deadline and submission.timestamp > project.deadline:
+                base_penalty = 13.0
+                decay = get_decay_multiplier(submission.timestamp, now)
+                project_deductions += base_penalty * decay
+                if (now - submission.timestamp).days < 30: has_failed_recently = True
+
+    # Streak Bonus
+    if not has_failed_recently:
+        total_bonuses += 5.0
+
+    # Normalization & Clamping
+    # Normalize deductions by work volume to keep it fair
+    normalized_task_deduction = (total_deductions / work_volume) * 10 
+    task_score = max(0, min(100.0, 100.0 - normalized_task_deduction + total_bonuses))
+    project_score = max(0, 100.0 - project_deductions)
+
+    # 4. KPI Form Score (Exclude Unrated)
+    form_scores = db.query(KPIScore).filter(KPIScore.employee_id == employee_id).all()
+    rated_scores = [s.score for s in form_scores if s.score is not None]
+    avg_form_score = sum(rated_scores) / len(rated_scores) if rated_scores else 100.0
+
+    # 5. Final Weighted Total (60% Task, 20% Project, 20% Form)
+    total_score = (task_score * 0.6) + (project_score * 0.2) + (avg_form_score * 0.2)
+    total_score = round(max(0, min(100.0, total_score)), 1)
+    
+    # Update KPIMetric
     metric = db.query(KPIMetric).filter(KPIMetric.employee_id == employee_id).first()
     if not metric:
         metric = KPIMetric(employee_id=employee_id)
         db.add(metric)
     
     metric.productivity_score = total_score
-    metric.task_completion_rate = round(completion_rate, 1)
-    metric.efficiency_score = round(task_score, 1) # Legacy mapping or custom index
+    metric.task_completion_rate = round((len([t for t in tasks if t.status == TaskStatus.DONE]) / len(tasks) * 100) if tasks else 0, 1)
+    metric.efficiency_score = round(task_score, 1)
     metric.task_score = round(task_score, 1)
     metric.project_score = round(project_score, 1)
     metric.form_score = round(avg_form_score, 1)
     
     db.commit()
     return total_score
+
 def sync_all_kpis(db: Session):
     """Recalculate KPI for all employees in the company."""
     users = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()

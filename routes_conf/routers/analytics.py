@@ -60,43 +60,79 @@ def get_dashboard_summary(
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Get quick summary stats for dashboard cards. Optimized for speed.
+    Enterprise Health Index: Median-based, Three-Tier Alerts, and Department Aggregation.
     """
-    # Organization isolation
     org_id = current_user.organization_id
     
-    # Counts
-    from sqlalchemy import select, literal_column
-    
-    # Combined query for all counts and averages in one go
-    # This is much faster as it's a single database roundtrip
-    summary = db.execute(select(
-        func.count(User.id).filter(User.role == UserRole.EMPLOYEE).label("employee_count"),
-        
-        # Subquery for projects
-        select(func.count(Project.id)).where(Project.organization_id == org_id).scalar_subquery().label("project_count"),
-        select(func.count(Project.id)).where(Project.organization_id == org_id, Project.status != "COMPLETED").scalar_subquery().label("active_projects"),
-        
-        # Subquery for tasks
-        select(func.count(Task.id)).join(User, Task.assigned_user == User.id).where(User.organization_id == org_id, Task.status != "DONE").scalar_subquery().label("pending_tasks"),
-        
-        # Metrics
-        func.avg(KPIMetric.productivity_score).label("avg_prod"),
-        func.avg(KPIMetric.task_completion_rate).label("avg_comp"),
-        func.avg(KPIMetric.efficiency_score).label("avg_eff")
-    ).select_from(User).outerjoin(KPIMetric, User.id == KPIMetric.employee_id).where(
+    # 1. Fetch all employee productivity scores for this org
+    metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(
         User.organization_id == org_id,
         User.role != UserRole.SUPER_ADMIN
-    )).first()
+    ).all()
+    
+    scores = sorted([m.productivity_score for m in metrics])
+    count = len(scores)
+    
+    # Calculate Median
+    if count == 0:
+        median_score = 0.0
+        avg_score = 0.0
+    else:
+        avg_score = sum(scores) / count
+        if count % 2 == 1:
+            median_score = scores[count // 2]
+        else:
+            median_score = (scores[count // 2 - 1] + scores[count // 2]) / 2.0
+
+    # 2. Three-Tier Alert System
+    # >75 = Healthy, 60-75 = Warning (amber), <60 = Critical (red)
+    health_status = "HEALTHY"
+    if median_score < 60:
+        health_status = "CRITICAL"
+    elif median_score <= 75:
+        health_status = "WARNING"
+        
+    # 3. Department (Unit) Aggregation
+    dept_stats = db.query(
+        User.unit,
+        func.avg(KPIMetric.productivity_score).label("avg_score"),
+        func.count(User.id).label("count")
+    ).join(KPIMetric, User.id == KPIMetric.employee_id).filter(
+        User.organization_id == org_id,
+        User.role != UserRole.SUPER_ADMIN
+    ).group_by(User.unit).all()
+    
+    departments = []
+    for d in dept_stats:
+        if not d.unit: continue
+        departments.append({
+            "name": d.unit.value if hasattr(d.unit, 'value') else str(d.unit),
+            "score": round(d.avg_score or 0, 1),
+            "employee_count": d.count,
+            "status": "HEALTHY" if (d.avg_score or 0) > 75 else ("WARNING" if (d.avg_score or 0) >= 60 else "CRITICAL")
+        })
+
+    # Counts
+    project_count = db.query(Project).filter(Project.organization_id == org_id).count()
+    active_projects = db.query(Project).filter(Project.organization_id == org_id, Project.status != "COMPLETED").count()
+    pending_tasks = db.query(Task).join(User, Task.assigned_user == User.id).filter(
+        User.organization_id == org_id, 
+        Task.status != "DONE"
+    ).count()
 
     return {
-        "employee_count": summary.employee_count or 0,
-        "project_count": summary.project_count or 0,
-        "active_project_count": summary.active_projects or 0,
-        "pending_tasks_count": summary.pending_tasks or 0,
-        "avg_productivity": round(summary.avg_prod or 0, 1),
-        "avg_completion": round(summary.avg_comp or 0, 1),
-        "avg_efficiency": round(summary.avg_eff or 0, 1)
+        "employee_count": count,
+        "project_count": project_count,
+        "active_project_count": active_projects,
+        "pending_tasks_count": pending_tasks,
+        "avg_productivity": round(avg_score, 1),
+        "median_productivity": round(median_score, 1),
+        "health_status": health_status,
+        "is_kpi_red": median_score < 60,
+        "is_kpi_amber": 60 <= median_score <= 75,
+        "departments": departments,
+        "low_performer_count": len([s for s in scores if s < 60]),
+        "at_risk_percentage": round((len([s for s in scores if s < 60]) / count * 100) if count > 0 else 0, 1)
     }
 
 @router.get("/company-kpi")

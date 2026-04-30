@@ -28,6 +28,12 @@ class TaskStatus(str, enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     DONE = "DONE"
 
+class TaskPriority(str, enum.Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
 class Organization(Base):
     __tablename__ = "organizations"
 
@@ -171,6 +177,7 @@ class Task(Base):
     assigned_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)   # who sent the task
     due_date = Column(DateTime, nullable=True)
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.TODO, nullable=False)
+    priority = Column(SQLEnum(TaskPriority), default=TaskPriority.MEDIUM, nullable=False)
     progress = Column(Integer, default=0)  # 0 to 100
     completed_at = Column(DateTime, nullable=True)
     started_at = Column(DateTime, nullable=True)
