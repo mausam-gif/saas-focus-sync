@@ -28,7 +28,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     role: Optional[UserRole] = None
-    unit: Optional[UserUnit] = None
+    unit: Optional[str] = None
     phone: Optional[str] = None
     location: Optional[str] = None
     designation: Optional[str] = None
