@@ -145,7 +145,6 @@ def calculate_all_kpis(
     sync_all_kpis(db)
     return {"message": "All metrics calculated successfully"}
 @router.get("/dashboard-full")
-@router.get("/dashboard-full")
 def get_full_dashboard_data(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -156,12 +155,12 @@ def get_full_dashboard_data(
     using PostgreSQL JSON aggregation for maximum speed.
     """
     from sqlalchemy import text
-    import json
+    from fastapi.responses import JSONResponse
     
     org_id = current_user.organization_id
     
-    # This single SQL query fetches EVERYTHING at once in a single database roundtrip.
-    # It aggregates summary stats, projects, users, tasks, metrics, and clients into a JSON object.
+    # We use explicit column selection to avoid SQLAlchemy's automatic object mapping
+    # which was causing Pydantic serialization errors.
     sql = text("""
         SELECT json_build_object(
             'summary', (
@@ -180,17 +179,21 @@ def get_full_dashboard_data(
             ),
             'projects', (
                 SELECT COALESCE(json_agg(p), '[]'::json) FROM (
-                    SELECT * FROM projects WHERE organization_id = :org_id ORDER BY created_at DESC
+                    SELECT id, name, description, status, start_date, deadline, organization_id, client_id, manager_id FROM projects 
+                    WHERE organization_id = :org_id 
+                    ORDER BY created_at DESC
                 ) p
             ),
             'users', (
                 SELECT COALESCE(json_agg(u), '[]'::json) FROM (
-                    SELECT id, name, email, role, unit, phone, location, designation, manager_id FROM users WHERE organization_id = :org_id
+                    SELECT id, name, email, role, unit, phone, location, designation, manager_id FROM users 
+                    WHERE organization_id = :org_id
                 ) u
             ),
             'tasks', (
                 SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-                    SELECT t.* FROM tasks t 
+                    SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date, t.assigned_user, t.project_id 
+                    FROM tasks t 
                     JOIN users u ON t.assigned_user = u.id 
                     WHERE u.organization_id = :org_id 
                     ORDER BY t.created_at DESC LIMIT 10
@@ -198,19 +201,22 @@ def get_full_dashboard_data(
             ),
             'metrics', (
                 SELECT COALESCE(json_agg(m), '[]'::json) FROM (
-                    SELECT m.* FROM kpi_metrics m
+                    SELECT m.id, m.employee_id, m.productivity_score, m.task_completion_rate, m.efficiency_score, m.task_score, m.project_score, m.form_score 
+                    FROM kpi_metrics m
                     JOIN users u ON m.employee_id = u.id
                     WHERE u.organization_id = :org_id
                 ) m
             ),
             'clients', (
                 SELECT COALESCE(json_agg(c), '[]'::json) FROM (
-                    SELECT * FROM clients WHERE organization_id = :org_id
+                    SELECT id, name, email, company, industry, organization_id FROM clients 
+                    WHERE organization_id = :org_id
                 ) c
             ),
             'questions', (
                 SELECT COALESCE(json_agg(q), '[]'::json) FROM (
-                    SELECT q.* FROM questions q
+                    SELECT q.id, q.text, q.category, q.target_employee, q.creator_id, q.created_at 
+                    FROM questions q
                     JOIN users u ON q.target_employee = u.id
                     WHERE u.organization_id = :org_id
                 ) q
@@ -219,4 +225,5 @@ def get_full_dashboard_data(
     """)
     
     result = db.execute(sql, {"org_id": org_id}).scalar()
-    return result
+    # return direct JSONResponse to bypass any further Pydantic processing
+    return JSONResponse(content=result)
