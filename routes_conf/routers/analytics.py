@@ -195,8 +195,9 @@ def get_full_dashboard_data(
     from db.models import Question
     questions = db.query(Question).join(User, Question.target_employee == User.id).filter(User.organization_id == org_id).all()
 
-    # Format result
-    return {
+    # Format result using jsonable_encoder to avoid PydanticSerializationError with SQLAlchemy models
+    from fastapi.encoders import jsonable_encoder
+    return jsonable_encoder({
         "summary": summary,
         "projects": projects,
         "users": users,
@@ -204,4 +205,4 @@ def get_full_dashboard_data(
         "metrics": metrics,
         "clients": clients,
         "questions": questions
-    }
+    })
