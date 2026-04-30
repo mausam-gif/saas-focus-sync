@@ -63,10 +63,26 @@ export default function ProjectsPage() {
     useEffect(() => {
         if (!authLoading && !user) { router.push('/login'); return; }
         if (authLoading || !user) return;
+
+        // 1. Instant Load from Cache (SWR Pattern)
+        const cacheKey = `projects_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                setProjects(parsed.projects || []);
+                setClients(parsed.clients || []);
+                setLoading(false); // Immediate transition to content
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        }
+
         fetchProjects();
     }, [user, authLoading, router]);
 
     const fetchProjects = async () => {
+        if (!user) return;
         try {
             const [projRes, clientRes] = await Promise.all([
                 api.get('projects/'),
@@ -74,8 +90,19 @@ export default function ProjectsPage() {
             ]);
             setProjects(projRes.data);
             setClients(clientRes.data);
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
+
+            // Update Cache
+            const cacheKey = `projects_data_${user.id}`;
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+                projects: projRes.data,
+                clients: clientRes.data,
+                timestamp: Date.now()
+            }));
+        } catch (e) { 
+            console.error(e); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const handleCreateProject = async (e: React.FormEvent) => {

@@ -33,6 +33,18 @@ export default function TeamPage() {
 
         if (authLoading || !user) return;
 
+        // 1. Instant Load from Cache (SWR Pattern)
+        const cacheKey = `team_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                setUsers(JSON.parse(cachedData));
+                setLoading(false); // Immediate transition to content
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        }
+
         fetchUsers();
     }, [user, authLoading, router]);
 
@@ -48,9 +60,14 @@ export default function TeamPage() {
     };
 
     const fetchUsers = async () => {
+        if (!user) return;
         try {
             const res = await api.get('users/');
             setUsers(res.data);
+
+            // Update Cache
+            const cacheKey = `team_data_${user.id}`;
+            sessionStorage.setItem(cacheKey, JSON.stringify(res.data));
         } catch (error) {
             console.error("Failed to fetch users", error);
         } finally {

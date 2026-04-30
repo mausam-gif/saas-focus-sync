@@ -57,13 +57,32 @@ export default function ClientsPage() {
     });
 
     useEffect(() => {
+        if (!user) return;
+
+        // 1. Instant Load from Cache (SWR Pattern)
+        const cacheKey = `clients_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                setClients(JSON.parse(cachedData));
+                setLoading(false); // Immediate transition to content
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        }
+
         fetchClients();
-    }, []);
+    }, [user]);
 
     const fetchClients = async () => {
+        if (!user) return;
         try {
             const res = await api.get('clients/');
             setClients(res.data);
+
+            // Update Cache
+            const cacheKey = `clients_data_${user.id}`;
+            sessionStorage.setItem(cacheKey, JSON.stringify(res.data));
         } catch (err) {
             console.error(err);
         } finally {
