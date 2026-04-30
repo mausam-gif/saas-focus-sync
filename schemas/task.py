@@ -34,7 +34,7 @@ class TaskResponse(BaseModel):
     assigned_by: Optional[int] = None
     due_date: Optional[datetime] = None
     status: TaskStatus
-    priority: TaskPriority
+    priority: Optional[TaskPriority] = TaskPriority.MEDIUM
     progress: int
     completed_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
