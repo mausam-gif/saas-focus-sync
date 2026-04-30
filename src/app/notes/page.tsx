@@ -100,7 +100,7 @@ export default function NotesPage() {
             setIsAddModalOpen(false);
             setIsEditing(null);
             setNoteForm({ title: '', content: '', is_reminder: false, reminder_date: '', project_id: '' });
-            fetchNotes();
+            fetchInitialData();
         } catch (err) {
             console.error(err);
         }
@@ -110,7 +110,7 @@ export default function NotesPage() {
         if (!confirm('Are you sure you want to delete this note?')) return;
         try {
             await api.delete(`notes/${id}`);
-            fetchNotes();
+            fetchInitialData();
         } catch (err) {
             console.error(err);
         }
