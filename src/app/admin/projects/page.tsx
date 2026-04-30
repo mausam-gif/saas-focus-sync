@@ -64,8 +64,25 @@ export default function ProjectsPage() {
     useEffect(() => {
         if (!authLoading && !user) { router.push('/login'); return; }
         if (authLoading || !user) return;
-        fetchProjects();
+        
         fetchOrgSettings();
+        
+        // INSTANT LOAD: Check cache first
+        const cacheKey = `projects_data_${user.id}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                setProjects(parsed.projects || []);
+                setClients(parsed.clients || []);
+                // If we have cache, don't show global loading
+                setLoading(false);
+            } catch (e) { console.error("Cache error", e); }
+        } else {
+            setLoading(true);
+        }
+
+        fetchProjects();
     }, [user, authLoading, router]);
 
     const fetchOrgSettings = async () => {
@@ -91,14 +108,18 @@ export default function ProjectsPage() {
                 api.get('projects/'),
                 api.get('clients/')
             ]);
-            setProjects(projRes.data);
-            setClients(clientRes.data);
+            
+            const projectsData = projRes.data;
+            const clientsData = clientRes.data;
+
+            setProjects(projectsData);
+            setClients(clientsData);
 
             // Update Cache
             const cacheKey = `projects_data_${user.id}`;
             sessionStorage.setItem(cacheKey, JSON.stringify({
-                projects: projRes.data,
-                clients: clientRes.data,
+                projects: projectsData,
+                clients: clientsData,
                 timestamp: Date.now()
             }));
         } catch (e) { 
