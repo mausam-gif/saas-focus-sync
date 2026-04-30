@@ -230,6 +230,8 @@ def add_step_automation(
     designation: str,
     task_title: str,
     task_description: str = None,
+    priority: str = "MEDIUM",
+    due_days_offset: int = 1,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_super_admin),
 ):
@@ -237,7 +239,9 @@ def add_step_automation(
         step_id=step_id, 
         designation=designation, 
         task_title=task_title, 
-        task_description=task_description
+        task_description=task_description,
+        priority=priority,
+        due_days_offset=due_days_offset
     )
     db.add(auto)
     db.commit()
@@ -291,6 +295,8 @@ def update_automation(
     designation: Optional[str] = None,
     task_title: Optional[str] = None,
     task_description: Optional[str] = None,
+    priority: Optional[str] = None,
+    due_days_offset: Optional[int] = None,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_super_admin),
 ):
@@ -299,6 +305,8 @@ def update_automation(
     if designation: auto.designation = designation
     if task_title: auto.task_title = task_title
     if task_description: auto.task_description = task_description
+    if priority: auto.priority = priority
+    if due_days_offset is not None: auto.due_days_offset = due_days_offset
     db.commit()
     return auto
 

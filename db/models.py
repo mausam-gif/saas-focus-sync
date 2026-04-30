@@ -101,6 +101,8 @@ class StepAutomation(Base):
     designation = Column(String, nullable=False) # e.g. "manager", "designer"
     task_title = Column(String, nullable=False)
     task_description = Column(Text, nullable=True)
+    priority = Column(SQLEnum(TaskPriority), default=TaskPriority.MEDIUM)
+    due_days_offset = Column(Integer, default=1) # Days until due after trigger
     step = relationship("ProjectStep", back_populates="automations")
 
 class Client(Base):

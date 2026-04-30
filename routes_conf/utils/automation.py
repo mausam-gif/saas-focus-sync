@@ -168,8 +168,9 @@ def trigger_project_automation(db: Session, project: Project, is_new: bool = Fal
                         description=auto.task_description,
                         project_id=project.id,
                         assigned_user=target_user.id,
-                        due_date=datetime.now(timezone.utc) + timedelta(days=3),
-                        status=TaskStatus.TODO
+                        due_date=datetime.now(timezone.utc) + timedelta(days=auto.due_days_offset),
+                        status=TaskStatus.TODO,
+                        priority=auto.priority
                     )
                     db.add(new_task)
     else:

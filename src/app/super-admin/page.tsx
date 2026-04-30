@@ -30,7 +30,10 @@ export default function SuperAdminDashboard() {
     const [newUnitName, setNewUnitName] = React.useState('');
     const [newStepName, setNewStepName] = React.useState('');
     const [newStepColor, setNewStepColor] = React.useState('#4F46E5');
-    const [newAuto, setNewAuto] = React.useState({ stepId: 0, designation: '', title: '', desc: '' });
+    const [newAuto, setNewAuto] = React.useState({ 
+        stepId: 0, designation: '', title: '', desc: '', 
+        priority: 'MEDIUM', dueDaysOffset: 1 
+    });
     const [designations, setDesignations] = React.useState<string[]>([]);
     const [editingItem, setEditingItem] = React.useState<{type: 'unit' | 'step' | 'auto', id: number, val: any} | null>(null);
     const [isEditingOrg, setIsEditingOrg] = React.useState(false);
@@ -176,18 +179,17 @@ export default function SuperAdminDashboard() {
         } catch (err) { alert("Failed to delete"); }
     };
 
-    const handleAddAuto = async (stepId: number) => {
-        if (!newAuto.title || !newAuto.designation) return alert("Title and Designation required");
+    const addAutomation = async () => {
         try {
-            await api.post(`super-admin/steps/${stepId}/automations`, null, {
-                params: { 
-                    designation: newAuto.designation, 
-                    task_title: newAuto.title, 
-                    task_description: newAuto.desc 
-                }
+            await api.post(`super-admin/automations/${newAuto.stepId}`, {
+                designation: newAuto.designation,
+                task_title: newAuto.title,
+                task_description: newAuto.desc,
+                priority: newAuto.priority,
+                due_days_offset: parseInt(newAuto.dueDaysOffset as any)
             });
-            setNewAuto({ stepId: 0, designation: '', title: '', desc: '' });
             fetchSettings(selectedOrg.id);
+            setNewAuto({ stepId: 0, designation: '', title: '', desc: '', priority: 'MEDIUM', dueDaysOffset: 1 });
         } catch (err) { alert("Failed to add automation"); }
     };
 
@@ -653,8 +655,56 @@ export default function SuperAdminDashboard() {
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
+
                                                 <div className="p-4 bg-gray-50/50 border-t border-gray-50 space-y-3">
-                                                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Stage Automations</p>
+                                                    <div className="space-y-4">
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div className="space-y-1">
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Title</label>
+                                                                <input type="text" value={newAuto.stepId === step.id ? newAuto.title : ''} onChange={e => setNewAuto({...newAuto, stepId: step.id, title: e.target.value})}
+                                                                    className="w-full border border-gray-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" placeholder="Task Title" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Assign to (Designation)</label>
+                                                                <select value={newAuto.stepId === step.id ? newAuto.designation : ''} onChange={e => setNewAuto({...newAuto, stepId: step.id, designation: e.target.value})}
+                                                                    className="w-full border border-gray-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                                                    <option value="">Select Role...</option>
+                                                                    {designations.map(d => <option key={d} value={d}>{d}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Description</label>
+                                                            <textarea value={newAuto.stepId === step.id ? newAuto.desc : ''} onChange={e => setNewAuto({...newAuto, stepId: step.id, desc: e.target.value})}
+                                                                className="w-full border border-gray-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white h-20 resize-none" placeholder="What needs to be done?" />
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div className="space-y-1">
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Priority</label>
+                                                                <select value={newAuto.stepId === step.id ? newAuto.priority : 'MEDIUM'} onChange={e => setNewAuto({...newAuto, stepId: step.id, priority: e.target.value})}
+                                                                    className="w-full border border-gray-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                                                    <option value="LOW">Low</option>
+                                                                    <option value="MEDIUM">Medium</option>
+                                                                    <option value="HIGH">High</option>
+                                                                    <option value="CRITICAL">Critical</option>
+                                                                </select>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Due in (Days)</label>
+                                                                <input type="number" min="0" value={newAuto.stepId === step.id ? newAuto.dueDaysOffset : 1} onChange={e => setNewAuto({...newAuto, stepId: step.id, dueDaysOffset: e.target.value})}
+                                                                    className="w-full border border-gray-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                                                            </div>
+                                                        </div>
+
+                                                        <button onClick={addAutomation} disabled={!newAuto.title || !newAuto.designation}
+                                                            className="w-full bg-blue-600 text-white py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-200">
+                                                            Set Automatic Rule
+                                                        </button>
+                                                    </div>
+
+                                                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-6">Stage Automations</p>
                                                     <div className="space-y-2">
                                                         {step.automations?.map((a: any) => (
                                                             <div key={a.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
