@@ -229,7 +229,7 @@ def get_full_dashboard_data(
             ),
             'projects', (
                 SELECT COALESCE(json_agg(p), '[]'::json) FROM (
-                    SELECT id, name, description, status, start_date, deadline, organization_id, client_id, manager_id, logo_url
+                    SELECT id, name, status, start_date, deadline, organization_id, client_id, logo_url
                     FROM projects WHERE organization_id = :org_id
                     ORDER BY id DESC
                 ) p
