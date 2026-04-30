@@ -273,7 +273,18 @@ export default function AdminDashboard() {
     };
 
     return (
-        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8 relative">
+            {loading && projects.length === 0 && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-50 flex items-center justify-center rounded-3xl" style={{ minHeight: '80vh' }}>
+                    <div className="flex flex-col items-center space-y-4">
+                        <div className="relative">
+                            <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                            <Loader2 className="w-8 h-8 text-indigo-600 absolute inset-0 m-auto animate-pulse" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-500 animate-pulse">Syncing Overview...</p>
+                    </div>
+                </div>
+            )}
             {/* Header section modern */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
                 <div>

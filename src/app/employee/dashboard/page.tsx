@@ -39,29 +39,61 @@ export default function EmployeeDashboard() {
     const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
     const [completionNotes, setCompletionNotes] = useState('');
     const [viewTaskId, setViewTaskId] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // ── Data loading ────────────────────────────────────────────────────────────
     const loadData = useCallback(async () => {
         if (!user) return;
-        const [tasksRes, questionsRes, projectsRes, scoresRes, assignmentsRes, analyticsRes] = await Promise.allSettled([
-            api.get('tasks/'),
-            api.get('questions/'),
-            api.get('projects/'),
-            api.get('kpi-forms/scores/me'),
-            api.get('kpi-forms/my-forms'),
-            api.get('analytics/'),
-        ]);
-        if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value.data);
-        if (questionsRes.status === 'fulfilled') setQuestions(questionsRes.value.data);
-        if (projectsRes.status === 'fulfilled') setProjects(projectsRes.value.data);
-        if (scoresRes.status === 'fulfilled') setMyScores(scoresRes.value.data);
-        if (assignmentsRes.status === 'fulfilled') {
-            setPendingForms(assignmentsRes.value.data.filter((a: any) => !a.is_submitted).length);
+        
+        // INSTANT LOAD: Check for cached data in session storage
+        const cacheKey = `dashboard_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                processDashboardData(parsed);
+                setIsLoading(false);
+            } catch (e) {
+                console.error("Cache parse failed", e);
+            }
         }
-        if (analyticsRes.status === 'fulfilled' && analyticsRes.value.data.length > 0) {
-            setKpiMetrics(analyticsRes.value.data[0]);
+
+        try {
+            // PHASE 1: Combined High-Performance Data Fetch
+            const res = await api.get('analytics/dashboard-full');
+            const data = res.data;
+            
+            // Update UI
+            processDashboardData(data);
+            setIsLoading(false);
+            
+            // Save to Cache for next time
+            sessionStorage.setItem(cacheKey, JSON.stringify(data));
+
+        } catch (error) {
+            console.error("Failed to load dashboard data", error);
+            setIsLoading(false);
         }
     }, [user]);
+
+    const processDashboardData = (data: any) => {
+        setTasks(data.my_tasks || []);
+        setQuestions(data.questions || []);
+        setProjects(data.projects || []);
+        setMyScores(data.my_scores || []);
+        setPendingForms(data.assignments?.length || 0);
+        
+        if (data.metrics && Array.isArray(data.metrics)) {
+            const myMetric = data.metrics.find((m: any) => m.employee_id === user?.id);
+            if (myMetric) setKpiMetrics(myMetric);
+        }
+        
+        console.log("Employee Dashboard Hydrated:", { 
+            tasks: (data.my_tasks || []).length, 
+            projects: (data.projects || []).length,
+            scores: (data.my_scores || []).length
+        });
+    };
 
     useEffect(() => {
         if (!authLoading && !user) { router.push('/login'); return; }
@@ -86,30 +118,34 @@ export default function EmployeeDashboard() {
     const doneTasks = tasks.filter(t => t.status === 'DONE');
     const unreadMessages = questions.filter(q => !q.responses || q.responses.length === 0).length;
 
-    // Gantt tasks — ALL projects visible to employee
-    const ganttTasks = projects.map((p: any) => {
-        let progress = 20;
-        let customClass = 'bar-analysis';
-        const s = p.status?.toUpperCase();
-        if (s === 'EVALUATION' || s === 'COMPLETED') { progress = 100; customClass = 'bar-evaluation'; }
-        else if (s === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
-        else if (s === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
-        else if (s === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
-        else { progress = 20; customClass = 'bar-analysis'; }
+    const ganttTasks = React.useMemo(() => {
+        return projects.map((p: any) => {
+            let progress = 20;
+            let customClass = 'bar-analysis';
+            const s = p.status?.toUpperCase();
+            if (s === 'EVALUATION' || s === 'COMPLETED') { progress = 100; customClass = 'bar-evaluation'; }
+            else if (s === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
+            else if (s === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
+            else if (s === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
+            else { progress = 20; customClass = 'bar-analysis'; }
 
-        const start = p.start_date ? p.start_date.split('T')[0] : today.toISOString().split('T')[0];
-        const rawEnd = p.deadline ? p.deadline.split('T')[0] : start;
-        const end = rawEnd <= start ? start : rawEnd;
-        return {
-            id: `proj-${p.id}`,
-            name: p.name,
-            start,
-            end,
-            progress,
-            dependencies: '',
-            custom_class: customClass,
-        };
-    });
+            const startStr = (p.start_date && typeof p.start_date === 'string') ? p.start_date : new Date().toISOString();
+            const start = startStr.split('T')[0];
+            const deadlineStr = (p.deadline && typeof p.deadline === 'string') ? p.deadline : startStr;
+            const rawEnd = deadlineStr.split('T')[0];
+            const end = rawEnd <= start ? start : rawEnd;
+            
+            return {
+                id: `proj-${p.id}`,
+                name: p.name || 'Untitled Project',
+                start,
+                end,
+                progress,
+                dependencies: '',
+                custom_class: customClass,
+            };
+        });
+    }, [projects]);
 
     // ── Handlers ────────────────────────────────────────────────────────────────
     const handleSubmitWork = async () => {
@@ -216,7 +252,18 @@ export default function EmployeeDashboard() {
 
     // ── Render ──────────────────────────────────────────────────────────────────
     return (
-        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8 relative">
+            {isLoading && projects.length === 0 && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-50 flex items-center justify-center rounded-3xl" style={{ minHeight: '80vh' }}>
+                    <div className="flex flex-col items-center space-y-4">
+                        <div className="relative">
+                            <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                            <Loader2 className="w-8 h-8 text-indigo-600 absolute inset-0 m-auto animate-pulse" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-500 animate-pulse">Syncing Workspace...</p>
+                    </div>
+                </div>
+            )}
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">

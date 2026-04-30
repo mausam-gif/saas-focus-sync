@@ -189,7 +189,7 @@ def calculate_all_kpis(
 
 # --- Full Dashboard Caching ---
 _full_dashboard_cache = {}
-_CACHE_TTL = 15 # Seconds
+_CACHE_TTL = 60 # Seconds
 
 @router.get("/dashboard-full")
 def get_full_dashboard_data(
@@ -243,12 +243,25 @@ def get_full_dashboard_data(
             ),
             'tasks', (
                 SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-                    SELECT t.id, t.title, t.description, t.status, t.due_date, t.assigned_user, t.project_id 
+                    SELECT t.id, t.title, t.description, t.status, t.due_date, t.assigned_user, t.project_id, 
+                           u.name as assigned_user_name, p.name as project_name, t.created_at, t.completed_at
                     FROM tasks t 
                     JOIN users u ON t.assigned_user = u.id 
+                    LEFT JOIN projects p ON t.project_id = p.id
                     WHERE u.organization_id = :org_id AND u.role != 'SUPER_ADMIN'
-                    ORDER BY t.id DESC LIMIT 10
+                    ORDER BY t.id DESC LIMIT 500
                 ) t
+            ),
+            'my_tasks', (
+                SELECT COALESCE(json_agg(mt), '[]'::json) FROM (
+                    SELECT t.id, t.title, t.description, t.status, t.due_date, t.assigned_user, t.project_id,
+                           u.name as assigned_user_name, p.name as project_name, t.created_at, t.completed_at
+                    FROM tasks t 
+                    JOIN users u ON t.assigned_user = u.id 
+                    LEFT JOIN projects p ON t.project_id = p.id
+                    WHERE t.assigned_user = :user_id
+                    ORDER BY t.id DESC
+                ) mt
             ),
             'metrics', (
                 SELECT COALESCE(json_agg(m), '[]'::json) FROM (
@@ -266,15 +279,33 @@ def get_full_dashboard_data(
             ),
             'questions', (
                 SELECT COALESCE(json_agg(q), '[]'::json) FROM (
-                    SELECT q.id, q.question_text as text, q.target_employee, q.created_by as creator_id 
+                    SELECT q.id, q.question_text as text, q.target_employee, q.created_by as creator_id,
+                           u.name as target_employee_name, r.responses
                     FROM questions q
                     JOIN users u ON q.target_employee = u.id
+                    LEFT JOIN (
+                        SELECT question_id, json_agg(json_build_object('id', id, 'response_text', response_text, 'timestamp', timestamp)) as responses
+                        FROM responses GROUP BY question_id
+                    ) r ON q.id = r.question_id
                     WHERE u.organization_id = :org_id
+                    ORDER BY q.id DESC
                 ) q
+            ),
+            'my_scores', (
+                SELECT COALESCE(json_agg(s), '[]'::json) FROM (
+                    SELECT id, score, form_title, created_at FROM kpi_score_history 
+                    WHERE employee_id = :user_id ORDER BY id DESC LIMIT 50
+                ) s
+            ),
+            'assignments', (
+                SELECT COALESCE(json_agg(a), '[]'::json) FROM (
+                    SELECT id, form_title, is_submitted FROM kpi_assignments 
+                    WHERE employee_id = :user_id AND is_submitted = false
+                ) a
             )
         )
     """)
     
-    result = db.execute(query, {"org_id": org_id}).scalar()
+    result = db.execute(query, {"org_id": org_id, "user_id": current_user.id}).scalar()
     # return direct JSONResponse to bypass any further Pydantic processing
     return JSONResponse(content=result)
