@@ -50,8 +50,11 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 def root(db: Session = Depends(deps.get_db)):
     try:
         from sqlalchemy import text
+        # Emergency Migration for Task Priority
+        db.execute(text("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'taskpriority') THEN CREATE TYPE taskpriority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL'); END IF; END $$;"))
+        db.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority taskpriority DEFAULT 'MEDIUM' NOT NULL;"))
         db.execute(text("SELECT 1"))
-        return {"message": "Vast Focus Sync API - ONLINE", "database": "CONNECTED"}
+        return {"message": "Vast Focus Sync API - MIGRATED", "database": "CONNECTED"}
     except Exception as e:
         return {"message": "Vast Focus Sync API - ONLINE", "database": "ERROR", "detail": str(e)}
 
