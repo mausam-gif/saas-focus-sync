@@ -52,7 +52,32 @@ def create_organization(
     db.add(db_admin)
     db.commit()
 
+    # Seed Defaults automatically
+    seed_organization_defaults(db, db_org.id)
+
     return db_org
+
+def seed_organization_defaults(db: Session, org_id: int):
+    """Seed an organization with standard default units and project steps."""
+    # 1. Default Units
+    units = ["PRODUCTION", "CREATIVE_AND_STRATEGY", "GROWTH_AND_ENGAGEMENT", "TEAM_DEVELOPMENT"]
+    for u_name in units:
+        if not db.query(OrganizationUnit).filter_by(organization_id=org_id, name=u_name).first():
+            db.add(OrganizationUnit(organization_id=org_id, name=u_name))
+    
+    # 2. Default Steps
+    steps = [
+        ("ANALYSIS", "#3B82F6", 1),
+        ("STRATEGY", "#A855F7", 2),
+        ("EXECUTION", "#F97316", 3),
+        ("ITERATION", "#EAB308", 4),
+        ("EVALUATION", "#22C55E", 5)
+    ]
+    for name, color, order in steps:
+        if not db.query(ProjectStep).filter_by(organization_id=org_id, name=name).first():
+            db.add(ProjectStep(organization_id=org_id, name=name, color=color, order=order))
+    
+    db.commit()
 
 @router.put("/organizations/{org_id}", response_model=OrganizationResponse)
 def update_organization(
@@ -237,6 +262,16 @@ def update_automation(
     if task_description: auto.task_description = task_description
     db.commit()
     return auto
+
+@router.post("/organizations/{org_id}/seed-defaults")
+def manual_seed_defaults(
+    org_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    """Manually trigger seeding for an existing organization."""
+    seed_organization_defaults(db, org_id)
+    return {"status": "success", "message": "Defaults seeded."}
 
 @router.get("/designations")
 def get_all_designations(
