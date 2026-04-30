@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, text
 from routes_conf import deps
+from fastapi.responses import JSONResponse
 from db.models import KPIMetric, Task, User, TaskStatus, UserRole, Project
 from db.session import engine
 from pydantic import BaseModel
@@ -65,12 +66,13 @@ def get_dashboard_summary(
     Includes emergency auto-migration for missing columns.
     """
     # 0. Emergency Migration (One-time check)
-    try:
-        db.execute(text("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'taskpriority') THEN CREATE TYPE taskpriority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL'); END IF; END $$;"))
-        db.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority taskpriority DEFAULT 'MEDIUM' NOT NULL;"))
-        db.commit()
-    except Exception:
-        db.rollback()
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'taskpriority') THEN CREATE TYPE taskpriority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL'); END IF; END $$;"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority taskpriority DEFAULT 'MEDIUM' NOT NULL;"))
+            conn.commit()
+        except Exception:
+            pass
 
     org_id = current_user.organization_id
     
@@ -273,6 +275,6 @@ def get_full_dashboard_data(
         )
     """)
     
-    result = db.execute(sql, {"org_id": org_id}).scalar()
+    result = db.execute(query, {"org_id": org_id}).scalar()
     # return direct JSONResponse to bypass any further Pydantic processing
     return JSONResponse(content=result)
