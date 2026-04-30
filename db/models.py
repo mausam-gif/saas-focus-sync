@@ -44,11 +44,11 @@ class Organization(Base):
     subscription_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
-    users = relationship("User", back_populates="organization")
+    users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
     units = relationship("OrganizationUnit", back_populates="organization", cascade="all, delete-orphan")
     project_steps = relationship("ProjectStep", back_populates="organization", cascade="all, delete-orphan")
-    clients = relationship("Client", back_populates="organization")
-    projects = relationship("Project", back_populates="organization")
+    clients = relationship("Client", back_populates="organization", cascade="all, delete-orphan")
+    projects = relationship("Project", back_populates="organization", cascade="all, delete-orphan")
 
 class User(Base):
     __tablename__ = "users"

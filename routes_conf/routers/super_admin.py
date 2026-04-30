@@ -100,6 +100,21 @@ def update_organization(
     db.refresh(db_org)
     return db_org
 
+@router.delete("/organizations/{org_id}")
+def delete_organization(
+    org_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    """Delete an organization and all its data (cascade)."""
+    db_org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not db_org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    db.delete(db_org)
+    db.commit()
+    return {"status": "success", "message": "Organization deleted"}
+
 # --- Dynamic Settings Endpoints ---
 
 from fastapi.encoders import jsonable_encoder

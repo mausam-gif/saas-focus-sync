@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { 
     Users, Plus, Shield, CheckCircle, XCircle, 
     Calendar, Mail, Globe, Settings, LogOut,
-    Building2, RefreshCcw, Activity, Trash2
+    Building2, RefreshCcw, Activity, Trash2, Edit
 } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
@@ -33,6 +33,8 @@ export default function SuperAdminDashboard() {
     const [newAuto, setNewAuto] = React.useState({ stepId: 0, designation: '', title: '', desc: '' });
     const [designations, setDesignations] = React.useState<string[]>([]);
     const [editingItem, setEditingItem] = React.useState<{type: 'unit' | 'step' | 'auto', id: number, val: any} | null>(null);
+    const [isEditingOrg, setIsEditingOrg] = React.useState(false);
+    const [editOrgForm, setEditOrgForm] = React.useState<any>(null);
 
     React.useEffect(() => {
         if (!authLoading && (!user || user.role !== 'SUPER_ADMIN')) {
@@ -97,6 +99,29 @@ export default function SuperAdminDashboard() {
         } catch (err) {
             alert("Failed to update status");
         }
+    };
+
+    const handleDeleteOrg = async (orgId: number, name: string) => {
+        if (!confirm(`CAUTION: This will delete the organization "${name}" AND ALL its data (Users, Projects, Clients, Everything). This cannot be undone. Proceed?`)) return;
+        try {
+            await api.delete(`super-admin/organizations/${orgId}`);
+            fetchOrganizations();
+            alert("Organization deleted successfully.");
+        } catch (err) { alert("Delete failed"); }
+    };
+
+    const handleUpdateOrg = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await api.put(`super-admin/organizations/${editOrgForm.id}`, {
+                name: editOrgForm.name,
+                slug: editOrgForm.slug,
+                subscription_expires_at: editOrgForm.subscription_expires_at || null
+            });
+            setIsEditingOrg(false);
+            fetchOrganizations();
+            alert("Organization updated!");
+        } catch (err) { alert("Update failed"); }
     };
 
     const openSettings = async (org: any) => {
@@ -335,7 +360,14 @@ export default function SuperAdminDashboard() {
                                             </div>
                                         </td>
                                          <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end space-x-2">
+                                             <div className="flex items-center justify-end space-x-2">
+                                                <button 
+                                                    onClick={() => { setEditOrgForm(org); setIsEditingOrg(true); }}
+                                                    className="p-2 text-blue-400 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Edit Details"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
                                                 <button 
                                                     onClick={() => openSettings(org)}
                                                     className="p-2 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -346,10 +378,18 @@ export default function SuperAdminDashboard() {
                                                 <button 
                                                     onClick={() => toggleOrgStatus(org)}
                                                     className={`p-2 rounded-lg transition-colors ${
-                                                        org.is_active ? 'text-red-400 hover:bg-red-50' : 'text-green-400 hover:bg-green-50'
+                                                        org.is_active ? 'text-amber-400 hover:bg-amber-50' : 'text-green-400 hover:bg-green-50'
                                                     }`}
+                                                    title={org.is_active ? "Suspend" : "Activate"}
                                                 >
                                                     <RefreshCcw className="w-5 h-5" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteOrg(org.id, org.name)}
+                                                    className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete Organization"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
                                                 </button>
                                             </div>
                                         </td>
@@ -369,6 +409,51 @@ export default function SuperAdminDashboard() {
                     </div>
                 </div>
             </main>
+
+            {/* Modal for editing organization */}
+            {isEditingOrg && editOrgForm && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-blue-50/20">
+                            <div>
+                                <h2 className="text-xl font-black text-gray-900">Edit Organization</h2>
+                                <p className="text-xs text-gray-500">Modify tenant details.</p>
+                            </div>
+                            <button onClick={() => setIsEditingOrg(false)} className="p-2 hover:bg-white rounded-xl transition-colors">
+                                <XCircle className="w-6 h-6 text-gray-300" />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleUpdateOrg} className="p-8 space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Org Name</label>
+                                    <input required type="text" value={editOrgForm.name} 
+                                        onChange={e => setEditOrgForm({...editOrgForm, name: e.target.value})}
+                                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">URL Slug</label>
+                                    <input required type="text" value={editOrgForm.slug} 
+                                        onChange={e => setEditOrgForm({...editOrgForm, slug: e.target.value.toLowerCase().replace(/ /g, '-')})}
+                                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Subscription Expiry</label>
+                                <input type="date" value={editOrgForm.subscription_expires_at ? editOrgForm.subscription_expires_at.split('T')[0] : ''}
+                                    onChange={e => setEditOrgForm({...editOrgForm, subscription_expires_at: e.target.value})}
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            </div>
+
+                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-100">
+                                Save Changes
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Modal for adding organization */}
             {isAddingOrg && (
