@@ -179,7 +179,7 @@ def get_full_dashboard_data(
             ),
             'projects', (
                 SELECT COALESCE(json_agg(p), '[]'::json) FROM (
-                    SELECT id, name, status, start_date, deadline, organization_id, client_id, manager_id FROM projects 
+                    SELECT id, name, status, start_date, deadline, organization_id, client_id FROM projects 
                     WHERE organization_id = :org_id 
                     ORDER BY created_at DESC
                 ) p
@@ -192,7 +192,7 @@ def get_full_dashboard_data(
             ),
             'tasks', (
                 SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-                    SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date, t.assigned_user, t.project_id 
+                    SELECT t.id, t.title, t.description, t.status, t.due_date, t.assigned_user, t.project_id 
                     FROM tasks t 
                     JOIN users u ON t.assigned_user = u.id 
                     WHERE u.organization_id = :org_id 
