@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "./frappe-gantt.css";
 
+@layer base {
+  input, textarea, select {
+    color: #000000 !important;
+  }
+  ::placeholder {
+    color: #000000 !important;
+    opacity: 0.6;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

@@ -2,7 +2,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from routes_conf import deps
-from db.models import Organization, User, UserRole
+from db.models import Organization, User, UserRole, OrganizationUnit, ProjectStep, StepAutomation
 from schemas.organization import OrganizationCreate, OrganizationUpdate, OrganizationResponse
 from core.security import get_password_hash
 
@@ -74,3 +74,113 @@ def update_organization(
     db.commit()
     db.refresh(db_org)
     return db_org
+
+# --- Dynamic Settings Endpoints ---
+
+@router.get("/organizations/{org_id}/settings")
+def get_organization_settings(
+    org_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+) -> Any:
+    """Get all dynamic settings for an organization."""
+    units = db.query(OrganizationUnit).filter(OrganizationUnit.organization_id == org_id).all()
+    steps = db.query(ProjectStep).filter(ProjectStep.organization_id == org_id).order_by(ProjectStep.order).all()
+    
+    # Enrich steps with automations
+    enriched_steps = []
+    for step in steps:
+        autos = db.query(StepAutomation).filter(StepAutomation.step_id == step.id).all()
+        enriched_steps.append({
+            "id": step.id,
+            "name": step.name,
+            "color": step.color,
+            "order": step.order,
+            "automations": autos
+        })
+        
+    return {
+        "units": units,
+        "steps": enriched_steps
+    }
+
+@router.post("/organizations/{org_id}/units")
+def add_organization_unit(
+    org_id: int,
+    name: str,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    unit = OrganizationUnit(organization_id=org_id, name=name)
+    db.add(unit)
+    db.commit()
+    return unit
+
+@router.delete("/units/{unit_id}")
+def delete_organization_unit(
+    unit_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    unit = db.query(OrganizationUnit).get(unit_id)
+    if unit:
+        db.delete(unit)
+        db.commit()
+    return {"message": "Deleted"}
+
+@router.post("/organizations/{org_id}/steps")
+def add_project_step(
+    org_id: int,
+    name: str,
+    color: str = "#4F46E5",
+    order: int = 0,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    step = ProjectStep(organization_id=org_id, name=name, color=color, order=order)
+    db.add(step)
+    db.commit()
+    return step
+
+@router.delete("/steps/{step_id}")
+def delete_project_step(
+    step_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    step = db.query(ProjectStep).get(step_id)
+    if step:
+        db.delete(step)
+        db.commit()
+    return {"message": "Deleted"}
+
+@router.post("/steps/{step_id}/automations")
+def add_step_automation(
+    step_id: int,
+    designation: str,
+    task_title: str,
+    task_description: str = None,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    auto = StepAutomation(
+        step_id=step_id, 
+        designation=designation, 
+        task_title=task_title, 
+        task_description=task_description
+    )
+    db.add(auto)
+    db.commit()
+    return auto
+
+@router.delete("/automations/{auto_id}")
+def delete_step_automation(
+    auto_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    auto = db.query(StepAutomation).get(auto_id)
+    if auto:
+        db.delete(auto)
+        db.commit()
+    return {"message": "Deleted"}

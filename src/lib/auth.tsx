@@ -11,9 +11,16 @@ interface User {
     name: string;
     role: UserRole;
     unit?: string;
+    unit_id?: number;
     phone?: string;
     location?: string;
     manager_id: number | null;
+    organization_id: number | null;
+    organization?: {
+        id: number;
+        name: string;
+        slug: string;
+    };
 }
 
 interface AuthContextType {

@@ -126,7 +126,9 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
                 <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-100">
                     <span className="text-white font-bold text-lg">E</span>
                 </div>
-                <span className="font-bold text-gray-900 text-xl tracking-tight">FocusSync</span>
+                <span className="font-bold text-gray-900 text-xl tracking-tight">
+                    {user?.organization?.name || 'FocusSync'}
+                </span>
             </div>
 
             <div className="px-4 mb-4">

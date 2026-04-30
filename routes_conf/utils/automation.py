@@ -120,66 +120,105 @@ TASK_MAPPING = {
 def trigger_project_automation(db: Session, project: Project, is_new: bool = False):
     """
     Automatically assign tasks and KPIs based on project stage and user designations.
+    Now supports both dynamic database-driven automations and legacy hardcoded ones.
     """
     current_stage = project.status.upper()
+    org_id = project.organization_id
     
-    # 1. Get all active users
-    users = db.query(User).all()
+    # 1. Try to find dynamic automations first
+    from db.models import ProjectStep, StepAutomation, Task, User, TaskStatus, KPIFormAssignment
     
-    for user in users:
-        if not user.designation:
-            continue
-            
-        designation_lower = user.designation.lower()
-        
-        # Check if we have tasks for this designation and stage
-        if designation_lower in TASK_MAPPING and current_stage in TASK_MAPPING[designation_lower]:
-            tasks_to_assign = TASK_MAPPING[designation_lower][current_stage]
-            
-            for task_data in tasks_to_assign:
-                # Check if task already exists (prevent duplicates)
-                existing_task = db.query(Task).filter(
+    # Check if this project is linked to a dynamic step
+    dynamic_step = None
+    if project.project_step_id:
+        dynamic_step = db.query(ProjectStep).get(project.project_step_id)
+    else:
+        # Try to find step by name for this org
+        dynamic_step = db.query(ProjectStep).filter(
+            ProjectStep.organization_id == org_id,
+            ProjectStep.name.ilike(current_stage)
+        ).first()
+
+    dynamic_automations = []
+    if dynamic_step:
+        dynamic_automations = db.query(StepAutomation).filter(StepAutomation.step_id == dynamic_step.id).all()
+
+    # 2. Get all active users in the org
+    users = db.query(User).filter(User.organization_id == org_id, User.is_active == True).all()
+    
+    # Track if we found any dynamic automations to decide if we should skip legacy
+    using_dynamic = len(dynamic_automations) > 0
+
+    if using_dynamic:
+        # Use dynamic automations from DB
+        for auto in dynamic_automations:
+            # Find users with this designation
+            target_users = [u for u in users if u.designation and u.designation.lower() == auto.designation.lower()]
+            for target_user in target_users:
+                # Prevent duplicates
+                existing = db.query(Task).filter(
                     Task.project_id == project.id,
-                    Task.assigned_user == user.id,
-                    Task.title == task_data["title"]
+                    Task.assigned_user == target_user.id,
+                    Task.title == auto.task_title
                 ).first()
                 
-                if not existing_task:
+                if not existing:
                     new_task = Task(
-                        title=task_data["title"],
-                        description=task_data["description"],
+                        title=auto.task_title,
+                        description=auto.task_description,
                         project_id=project.id,
-                        assigned_user=user.id,
+                        assigned_user=target_user.id,
                         due_date=datetime.now(timezone.utc) + timedelta(days=3),
                         status=TaskStatus.TODO
                     )
                     db.add(new_task)
+    else:
+        # FALLBACK: Use legacy hardcoded TASK_MAPPING
+        for user in users:
+            if not user.designation:
+                continue
+            designation_lower = user.designation.lower()
+            if designation_lower in TASK_MAPPING and current_stage in TASK_MAPPING[designation_lower]:
+                tasks_to_assign = TASK_MAPPING[designation_lower][current_stage]
+                for task_data in tasks_to_assign:
+                    existing_task = db.query(Task).filter(
+                        Task.project_id == project.id,
+                        Task.assigned_user == user.id,
+                        Task.title == task_data["title"]
+                    ).first()
+                    if not existing_task:
+                        new_task = Task(
+                            title=task_data["title"],
+                            description=task_data["description"],
+                            project_id=project.id,
+                            assigned_user=user.id,
+                            due_date=datetime.now(timezone.utc) + timedelta(days=3),
+                            status=TaskStatus.TODO
+                        )
+                        db.add(new_task)
     
     # 2. Automated KPI Form Assignment
-    # If project moves to EVALUATION, assign a general Project Evaluation KPI form to everyone
-    if current_stage == "EVALUATION":
-        # Find any KPI Form with 'Evaluation' in the title
+    if current_stage == "EVALUATION" or (dynamic_step and dynamic_step.name.upper() == "EVALUATION"):
         from db.models import KPIForm
-        evaluation_form = db.query(KPIForm).filter(KPIForm.title.ilike("%Evaluation%"), KPIForm.is_active == True).first()
+        evaluation_form = db.query(KPIForm).filter(
+            KPIForm.title.ilike("%Evaluation%"), 
+            KPIForm.is_active == True,
+            # If multiple evaluation forms, try to find one for this org or a global one
+        ).first()
         
         if evaluation_form:
-            # Get members involved (those with tasks in this project)
             involved_user_ids = [t.assigned_user for t in project.tasks]
-            # Also include any managers/admins if needed, but for now just task assignees
-            
             for user_id in set(involved_user_ids):
-                # Check if already assigned
                 existing_assignment = db.query(KPIFormAssignment).filter(
                     KPIFormAssignment.form_id == evaluation_form.id,
                     KPIFormAssignment.employee_id == user_id,
                     KPIFormAssignment.is_submitted == False
                 ).first()
-                
                 if not existing_assignment:
                     new_assignment = KPIFormAssignment(
                         form_id=evaluation_form.id,
                         employee_id=user_id,
-                        assigned_by=1, # System/Admin
+                        assigned_by=1,
                         due_date=datetime.now(timezone.utc) + timedelta(days=7),
                         is_submitted=False
                     )

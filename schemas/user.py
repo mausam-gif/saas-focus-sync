@@ -1,11 +1,12 @@
 from typing import Optional
 from pydantic import BaseModel, EmailStr, field_validator
-from db.models import UserRole, UserUnit
+from db.models import UserRole
+from schemas.organization import OrganizationResponse
 
 class UserBase(BaseModel):
     email: EmailStr
     name: str
-    unit: Optional[UserUnit] = None
+    unit: Optional[str] = None
     phone: Optional[str] = None
     location: Optional[str] = None
     designation: Optional[str] = None
@@ -36,8 +37,10 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     role: UserRole
-    # manager_id is already in UserBase? No, adding specifically if needed
+    organization_id: Optional[int] = None
+    organization: Optional[OrganizationResponse] = None
     manager_id: Optional[int] = None
+    unit_id: Optional[int] = None
 
     model_config = {"from_attributes": True}
 

@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { 
     Users, Plus, Shield, CheckCircle, XCircle, 
     Calendar, Mail, Globe, Settings, LogOut,
-    Building2, RefreshCcw, Activity
+    Building2, RefreshCcw, Activity, Trash2
 } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
@@ -23,6 +23,14 @@ export default function SuperAdminDashboard() {
         admin_name: '',
         subscription_expires_at: ''
     });
+
+    const [selectedOrg, setSelectedOrg] = React.useState<any>(null);
+    const [orgSettings, setOrgSettings] = React.useState<any>({ units: [], steps: [] });
+    const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+    const [newUnitName, setNewUnitName] = React.useState('');
+    const [newStepName, setNewStepName] = React.useState('');
+    const [newStepColor, setNewStepColor] = React.useState('#4F46E5');
+    const [newAuto, setNewAuto] = React.useState({ stepId: 0, designation: '', title: '', desc: '' });
 
     React.useEffect(() => {
         if (!authLoading && (!user || user.role !== 'SUPER_ADMIN')) {
@@ -77,6 +85,77 @@ export default function SuperAdminDashboard() {
         } catch (err) {
             alert("Failed to update status");
         }
+    };
+
+    const openSettings = async (org: any) => {
+        setSelectedOrg(org);
+        setIsSettingsOpen(true);
+        fetchSettings(org.id);
+    };
+
+    const fetchSettings = async (orgId: number) => {
+        try {
+            const res = await api.get(`super-admin/organizations/${orgId}/settings`);
+            setOrgSettings(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleAddUnit = async () => {
+        if (!newUnitName.trim()) return;
+        try {
+            await api.post(`super-admin/organizations/${selectedOrg.id}/units`, null, { params: { name: newUnitName } });
+            setNewUnitName('');
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Failed to add unit"); }
+    };
+
+    const handleDeleteUnit = async (id: number) => {
+        try {
+            await api.delete(`super-admin/units/${id}`);
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Failed to delete"); }
+    };
+
+    const handleAddStep = async () => {
+        if (!newStepName.trim()) return;
+        try {
+            await api.post(`super-admin/organizations/${selectedOrg.id}/steps`, null, { 
+                params: { name: newStepName, color: newStepColor, order: orgSettings.steps.length } 
+            });
+            setNewStepName('');
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Failed to add step"); }
+    };
+
+    const handleDeleteStep = async (id: number) => {
+        try {
+            await api.delete(`super-admin/steps/${id}`);
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Failed to delete"); }
+    };
+
+    const handleAddAuto = async (stepId: number) => {
+        if (!newAuto.title || !newAuto.designation) return alert("Title and Designation required");
+        try {
+            await api.post(`super-admin/steps/${stepId}/automations`, null, {
+                params: { 
+                    designation: newAuto.designation, 
+                    task_title: newAuto.title, 
+                    task_description: newAuto.desc 
+                }
+            });
+            setNewAuto({ stepId: 0, designation: '', title: '', desc: '' });
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Failed to add automation"); }
+    };
+
+    const handleDeleteAuto = async (id: number) => {
+        try {
+            await api.delete(`super-admin/automations/${id}`);
+            fetchSettings(selectedOrg.id);
+        } catch (err) { alert("Failed to delete"); }
     };
 
     if (authLoading || loading) return <div className="flex items-center justify-center h-screen">Loading Master Dashboard...</div>;
@@ -186,15 +265,24 @@ export default function SuperAdminDashboard() {
                                                 {org.subscription_expires_at ? new Date(org.subscription_expires_at).toLocaleDateString() : 'Lifetime'}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button 
-                                                onClick={() => toggleOrgStatus(org)}
-                                                className={`p-2 rounded-lg transition-colors ${
-                                                    org.is_active ? 'text-red-400 hover:bg-red-50' : 'text-green-400 hover:bg-green-50'
-                                                }`}
-                                            >
-                                                <RefreshCcw className="w-5 h-5" />
-                                            </button>
+                                         <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end space-x-2">
+                                                <button 
+                                                    onClick={() => openSettings(org)}
+                                                    className="p-2 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                    title="Organization Settings"
+                                                >
+                                                    <Settings className="w-5 h-5" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => toggleOrgStatus(org)}
+                                                    className={`p-2 rounded-lg transition-colors ${
+                                                        org.is_active ? 'text-red-400 hover:bg-red-50' : 'text-green-400 hover:bg-green-50'
+                                                    }`}
+                                                >
+                                                    <RefreshCcw className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -274,6 +362,123 @@ export default function SuperAdminDashboard() {
                                 Create Organization & Admin
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal for Organization Settings */}
+            {isSettingsOpen && selectedOrg && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 sm:p-8">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-5xl h-full max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-8 duration-500">
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div className="flex items-center space-x-4">
+                                <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-indigo-100">
+                                    {selectedOrg.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-gray-900 leading-tight">{selectedOrg.name}</h2>
+                                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest">Configuration Console</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsSettingsOpen(false)} className="p-3 hover:bg-white rounded-2xl transition-all border border-transparent hover:border-gray-100">
+                                <XCircle className="w-8 h-8 text-gray-300" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                {/* Section 1: Units */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Team Departments</h3>
+                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">{orgSettings.units.length} ACTIVE</span>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                        <input type="text" value={newUnitName} onChange={e => setNewUnitName(e.target.value)}
+                                            placeholder="e.g. Creative, Marketing, HR"
+                                            className="flex-1 bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                        <button onClick={handleAddUnit} className="bg-indigo-600 text-white px-6 rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100">
+                                            <Plus className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {orgSettings.units.map((u: any) => (
+                                            <div key={u.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl group hover:border-indigo-200 transition-all">
+                                                <span className="text-sm font-bold text-gray-700">{u.name}</span>
+                                                <button onClick={() => handleDeleteUnit(u.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Section 2: Project Steps */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Project Pipeline Steps</h3>
+                                        <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-bold">{orgSettings.steps.length} STAGES</span>
+                                    </div>
+                                    <div className="bg-gray-50 p-6 rounded-3xl space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <input type="text" value={newStepName} onChange={e => setNewStepName(e.target.value)}
+                                                placeholder="Step Name (e.g. Planning)"
+                                                className="bg-white border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            <input type="color" value={newStepColor} onChange={e => setNewStepColor(e.target.value)}
+                                                className="w-full h-[44px] bg-white rounded-xl cursor-pointer p-1" />
+                                        </div>
+                                        <button onClick={handleAddStep} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">
+                                            Add Pipeline Step
+                                        </button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {orgSettings.steps.map((step: any) => (
+                                            <div key={step.id} className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+                                                <div className="p-4 flex items-center justify-between" style={{ borderLeft: `6px solid ${step.color}` }}>
+                                                    <div>
+                                                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-0.5">Stage {step.order + 1}</p>
+                                                        <h4 className="font-black text-gray-900">{step.name}</h4>
+                                                    </div>
+                                                    <button onClick={() => handleDeleteStep(step.id)} className="p-2 text-gray-300 hover:text-red-500">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <div className="p-4 bg-gray-50/50 border-t border-gray-50 space-y-3">
+                                                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Stage Automations</p>
+                                                    <div className="space-y-2">
+                                                        {step.automations?.map((a: any) => (
+                                                            <div key={a.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[10px] font-black text-gray-400 uppercase leading-none mb-1">{a.designation}</p>
+                                                                    <p className="text-xs font-bold text-gray-700 truncate">{a.task_title}</p>
+                                                                </div>
+                                                                <button onClick={() => handleDeleteAuto(a.id)} className="text-gray-300 hover:text-red-400 ml-2">
+                                                                    <XCircle className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {/* Add Automation Sub-form */}
+                                                    <div className="bg-white p-3 rounded-xl border border-dashed border-gray-200 space-y-2">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <input type="text" placeholder="Designation" value={newAuto.stepId === step.id ? newAuto.designation : ''}
+                                                                onChange={e => setNewAuto({...newAuto, stepId: step.id, designation: e.target.value})}
+                                                                className="text-[10px] p-1.5 border-b border-gray-100 outline-none" />
+                                                            <input type="text" placeholder="Task Title" value={newAuto.stepId === step.id ? newAuto.title : ''}
+                                                                onChange={e => setNewAuto({...newAuto, stepId: step.id, title: e.target.value})}
+                                                                className="text-[10px] p-1.5 border-b border-gray-100 outline-none" />
+                                                        </div>
+                                                        <button onClick={() => handleAddAuto(step.id)} className="w-full text-[10px] font-black text-indigo-600 hover:bg-indigo-50 py-1 rounded transition-colors">
+                                                            + Add Auto-Task
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

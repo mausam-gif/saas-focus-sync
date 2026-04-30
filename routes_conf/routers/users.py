@@ -148,6 +148,11 @@ def read_user_me(
     """
     Get current user.
     """
+    # Ensure organization is loaded for the response_model
+    if current_user.organization_id:
+        # This will trigger lazy loading if not already loaded, 
+        # but since we use response_model it will be serialized.
+        pass
     return current_user
 
 @router.get("/me/status", response_model=UserStatusResponse)

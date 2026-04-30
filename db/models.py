@@ -45,6 +45,8 @@ class Organization(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     users = relationship("User", back_populates="organization")
+    units = relationship("OrganizationUnit", back_populates="organization", cascade="all, delete-orphan")
+    project_steps = relationship("ProjectStep", back_populates="organization", cascade="all, delete-orphan")
     clients = relationship("Client", back_populates="organization")
     projects = relationship("Project", back_populates="organization")
 
@@ -56,7 +58,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(SQLEnum(UserRole), default=UserRole.EMPLOYEE, nullable=False)
-    unit = Column(SQLEnum(UserUnit), nullable=True)
+    unit = Column(String, nullable=True) # Now dynamic per organization
+    unit_id = Column(Integer, ForeignKey("organization_units.id"), nullable=True)
     phone = Column(String, nullable=True)  # WhatsApp
     location = Column(String, nullable=True)
     designation = Column(String, nullable=True)
@@ -72,6 +75,33 @@ class User(Base):
     work_submissions = relationship("WorkSubmission", back_populates="employee")
     kpi_metrics = relationship("KPIMetric", back_populates="employee", uselist=False)
     clients_created = relationship("Client", back_populates="creator")
+    organization_unit = relationship("OrganizationUnit")
+
+class OrganizationUnit(Base):
+    __tablename__ = "organization_units"
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    name = Column(String, nullable=False)
+    organization = relationship("Organization", back_populates="units")
+
+class ProjectStep(Base):
+    __tablename__ = "project_steps"
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    name = Column(String, nullable=False)
+    color = Column(String, default="#4F46E5") # Default indigo
+    order = Column(Integer, default=0)
+    organization = relationship("Organization", back_populates="project_steps")
+    automations = relationship("StepAutomation", back_populates="step", cascade="all, delete-orphan")
+
+class StepAutomation(Base):
+    __tablename__ = "step_automations"
+    id = Column(Integer, primary_key=True, index=True)
+    step_id = Column(Integer, ForeignKey("project_steps.id"), nullable=False)
+    designation = Column(String, nullable=False) # e.g. "manager", "designer"
+    task_title = Column(String, nullable=False)
+    task_description = Column(Text, nullable=True)
+    step = relationship("ProjectStep", back_populates="automations")
 
 class Client(Base):
     __tablename__ = "clients"
@@ -147,12 +177,15 @@ class Project(Base):
     the_hook = Column(Text, nullable=True)
     logo_url = Column(String, nullable=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    project_step_id = Column(Integer, ForeignKey("project_steps.id"), nullable=True)
 
     organization = relationship("Organization", back_populates="projects")
     client = relationship("Client", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     work_submissions = relationship("WorkSubmission", back_populates="project", cascade="all, delete-orphan")
     documents = relationship("ProjectDocument", back_populates="project", cascade="all, delete-orphan")
+    notes = relationship("Note", backref="project")
+    project_step = relationship("ProjectStep")
 
 class ProjectDocument(Base):
     __tablename__ = "project_documents"
