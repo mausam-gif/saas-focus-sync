@@ -138,9 +138,9 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
                             : 'border-gray-100 bg-white hover:bg-gray-50 hover:shadow-lg hover:shadow-indigo-100/30'}`}
                 >
                     <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-base shadow-inner transition-transform group-hover:scale-105
-                        ${user?.role === 'ADMIN' ? 'bg-amber-100 text-amber-700' : 
-                          user?.role === 'MANAGER' ? 'bg-purple-100 text-purple-700' :
-                          (status?.is_kpi_red && user?.role !== 'ADMIN') ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-700'}`}
+                        ${user?.role?.toUpperCase() === 'ADMIN' ? 'bg-amber-100 text-amber-700' : 
+                          user?.role?.toUpperCase() === 'MANAGER' ? 'bg-purple-100 text-purple-700' :
+                          (status?.is_kpi_red && user?.role?.toUpperCase() !== 'ADMIN') ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-700'}`}
                     >
                         {user?.name?.[0] || 'U'}
                     </div>
