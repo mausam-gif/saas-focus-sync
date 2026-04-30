@@ -293,14 +293,19 @@ def get_full_dashboard_data(
             ),
             'my_scores', (
                 SELECT COALESCE(json_agg(s), '[]'::json) FROM (
-                    SELECT id, score, form_title, created_at FROM kpi_score_history 
-                    WHERE employee_id = :user_id ORDER BY id DESC LIMIT 50
+                    SELECT s.id, s.score, f.title as form_title, s.calculated_at as created_at 
+                    FROM kpi_scores s
+                    JOIN kpi_forms f ON s.form_id = f.id
+                    WHERE s.employee_id = :user_id 
+                    ORDER BY s.id DESC LIMIT 50
                 ) s
             ),
             'assignments', (
                 SELECT COALESCE(json_agg(a), '[]'::json) FROM (
-                    SELECT id, form_title, is_submitted FROM kpi_assignments 
-                    WHERE employee_id = :user_id AND is_submitted = false
+                    SELECT a.id, f.title as form_title, a.is_submitted 
+                    FROM kpi_form_assignments a
+                    JOIN kpi_forms f ON a.form_id = f.id
+                    WHERE a.employee_id = :user_id AND a.is_submitted = false
                 ) a
             )
         )

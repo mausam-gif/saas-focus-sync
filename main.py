@@ -13,12 +13,15 @@ app = FastAPI(
 @app.middleware("http")
 async def add_cors_headers(request, call_next):
     origin = request.headers.get("Origin")
-    # Preflight check (OPTIONS)
     if request.method == "OPTIONS":
         from fastapi.responses import Response
         response = Response()
     else:
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as e:
+            from fastapi.responses import JSONResponse
+            response = JSONResponse(content={"detail": str(e)}, status_code=500)
         
     if origin:
         response.headers["Access-Control-Allow-Origin"] = origin
