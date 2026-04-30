@@ -70,9 +70,17 @@ export default function ProjectsPage() {
 
     const fetchOrgSettings = async () => {
         if (!user?.organization_id) return;
+        
+        const cacheKey = `org_settings_${user.organization_id}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            setOrgSettings(JSON.parse(cached));
+        }
+
         try {
             const res = await api.get(`super-admin/organizations/${user.organization_id}/settings`);
             setOrgSettings(res.data);
+            sessionStorage.setItem(cacheKey, JSON.stringify(res.data));
         } catch (err) { console.error(err); }
     };
 

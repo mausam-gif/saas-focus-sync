@@ -50,9 +50,28 @@ export default function AdminDashboard() {
     const [clients, setClients] = useState<any[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
     const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("");
+    const [orgSettings, setOrgSettings] = useState<any>({ units: [], steps: [] });
+
+    const fetchOrgSettings = useCallback(async () => {
+        if (!user?.organization_id) return;
+        
+        const cacheKey = `org_settings_${user.organization_id}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            setOrgSettings(JSON.parse(cached));
+        }
+
+        try {
+            const res = await api.get(`super-admin/organizations/${user.organization_id}/settings`);
+            setOrgSettings(res.data);
+            sessionStorage.setItem(cacheKey, JSON.stringify(res.data));
+        } catch (err) { console.error(err); }
+    }, [user]);
 
     const loadData = useCallback(async () => {
         if (!user) return;
+        
+        fetchOrgSettings();
         
         // INSTANT LOAD: Check for cached data in session storage
         const cacheKey = `dashboard_data_${user.id}`;
@@ -86,7 +105,7 @@ export default function AdminDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, fetchOrgSettings]);
 
     const processDashboardData = (data: any) => {
         const summary = data.summary || {};
@@ -102,21 +121,27 @@ export default function AdminDashboard() {
         const projectData = data.projects || [];
         setProjects(projectData);
         const fetchedTasks = projectData.map((p: any) => {
+            const statusName = p.status || 'ANALYSIS';
+            // Sanitize status name for CSS class
+            const safeClass = `bar-${statusName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+            
+            // Calculate progress based on step index
             let progress = 20;
-            let customClass = 'bar-analysis';
-            const s = p.status?.toUpperCase();
-            if (s === 'EVALUATION' || s === 'COMPLETED') { progress = 100; customClass = 'bar-evaluation'; }
-            else if (s === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
-            else if (s === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
-            else if (s === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
-            else { progress = 20; customClass = 'bar-analysis'; }
+            if (orgSettings.steps.length > 0) {
+                const idx = orgSettings.steps.findIndex((s:any) => s.name === statusName);
+                if (idx !== -1) {
+                    progress = Math.round(((idx + 1) / orgSettings.steps.length) * 100);
+                }
+            }
 
             return {
                 id: `Project-${p.id}`,
                 name: p.name,
                 start: p.start_date.split('T')[0],
                 end: p.deadline.split('T')[0],
-                progress, dependencies: '', custom_class: customClass
+                progress, 
+                dependencies: '', 
+                custom_class: safeClass
             };
         });
         setTasks(fetchedTasks);
@@ -274,6 +299,16 @@ export default function AdminDashboard() {
 
     return (
         <div className="p-4 sm:p-8 font-sans max-w-7xl mx-auto space-y-6 sm:space-y-8 relative">
+            {/* Dynamic CSS for Gantt Chart Colors */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                ${orgSettings.steps.map((s: any) => {
+                    const safeClass = `.bar-${s.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+                    return `
+                        ${safeClass} .bar { fill: ${s.color} !important; }
+                        ${safeClass} .bar-progress { fill: ${s.color} !important; filter: brightness(0.8); }
+                    `;
+                }).join('\n')}
+            `}} />
             {loading && projects.length === 0 && (
                 <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-50 flex items-center justify-center rounded-3xl" style={{ minHeight: '80vh' }}>
                     <div className="flex flex-col items-center space-y-4">
