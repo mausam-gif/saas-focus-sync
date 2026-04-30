@@ -9,15 +9,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
+# --- Nuclear CORS Fix ---
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    origin = request.headers.get("Origin")
+    # Preflight check (OPTIONS)
+    if request.method == "OPTIONS":
+        from fastapi.responses import Response
+        response = Response()
+    else:
+        response = await call_next(request)
+        
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
+# Configure CORS (Standard fallback)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://vastproject-nine.vercel.app",
-        "https://vast-project.vercel.app",
-        "https://vast-api-zeta.vercel.app",
-        "http://localhost:3000"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
