@@ -184,3 +184,21 @@ def delete_step_automation(
         db.delete(auto)
         db.commit()
     return {"message": "Deleted"}
+
+@router.post("/migrate-db-dynamic")
+def migrate_db_dynamic(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_super_admin),
+):
+    """Temporary endpoint to add missing columns to production DB."""
+    from sqlalchemy import text
+    try:
+        # Add unit_id to users
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER REFERENCES organization_units(id)"))
+        # Add project_step_id to projects
+        db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER REFERENCES project_steps(id)"))
+        db.commit()
+        return {"status": "success", "message": "Columns added successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
