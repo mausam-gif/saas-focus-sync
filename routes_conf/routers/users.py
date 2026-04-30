@@ -184,26 +184,31 @@ def get_user_status(
         Project.status != "COMPLETED"
     ).count()
 
-    # 4. KPI Score (Average of primary metrics)
-    kpi_metric = db.query(KPIMetric).filter(KPIMetric.employee_id == current_user.id).first()
-    if kpi_metric:
-        own_score = (kpi_metric.productivity_score + kpi_metric.task_completion_rate + kpi_metric.efficiency_score) / 3.0
-    else:
-        own_score = 0.0
+    # 4. KPI Score (Average of primary metrics) - Exclude Admin/Owner
+    own_score = 100.0
+    is_red = False
+    if current_user.role != UserRole.ADMIN:
+        kpi_metric = db.query(KPIMetric).filter(KPIMetric.employee_id == current_user.id).first()
+        if kpi_metric:
+            own_score = (kpi_metric.productivity_score + kpi_metric.task_completion_rate + kpi_metric.efficiency_score) / 3.0
+            is_red = own_score < 50.0
+        else:
+            own_score = 0.0
 
     # 5. Company KPI (for privileged, Isolated by Org)
     company_avg = None
     is_company_red = False
     if current_user.role in [UserRole.ADMIN, UserRole.MANAGER]:
         metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(
-            User.organization_id == current_user.organization_id
+            User.organization_id == current_user.organization_id,
+            User.role != UserRole.SUPER_ADMIN
         ).all()
         if metrics:
             avg_val = sum((m.productivity_score + m.task_completion_rate + m.efficiency_score) / 3.0 for m in metrics) / len(metrics)
             company_avg = float(avg_val)
             is_company_red = company_avg < 50.0
         else:
-            company_avg = 0.0
+            company_avg = 100.0
 
     return {
         "unread_chat_count": unread_chats,
@@ -212,7 +217,7 @@ def get_user_status(
         "active_projects_count": active_projects,
         "own_kpi": own_score,
         "company_kpi_avg": company_avg,
-        "is_kpi_red": own_score < 50.0,
+        "is_kpi_red": is_red,
         "is_company_kpi_red": is_company_red
     }
 

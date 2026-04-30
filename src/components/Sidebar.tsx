@@ -151,11 +151,11 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider
-                                ${user?.role === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 
-                                  user?.role === 'MANAGER' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
-                                {user?.role.toLowerCase() === 'admin' ? 'Owner' : user?.role.toLowerCase()}
+                                ${user?.role.toUpperCase() === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 
+                                  user?.role.toUpperCase() === 'MANAGER' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
+                                {user?.role.toUpperCase() === 'ADMIN' ? 'Owner' : user?.role.toLowerCase()}
                             </span>
-                            {(status?.is_kpi_red && user?.role !== 'ADMIN') && (
+                            {(status?.is_kpi_red && user?.role.toUpperCase() !== 'ADMIN') && (
                                 <span className="flex items-center gap-0.5 text-[9px] font-black text-red-600 uppercase animate-pulse">
                                     <AlertTriangle className="w-2.5 h-2.5" /> LOW KPI
                                 </span>
@@ -174,7 +174,9 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
                         <Link
                             key={link.name}
                             href={link.href}
+                            prefetch={true}
                             onClick={() => setIsSidebarOpen && setIsSidebarOpen(false)}
+                            onMouseEnter={() => router.prefetch(link.href)}
                             className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group ${isActive
                                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
                                 : 'text-gray-500 hover:bg-gray-50 hover:text-indigo-600'

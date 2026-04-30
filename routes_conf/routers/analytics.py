@@ -60,37 +60,29 @@ def get_dashboard_summary(
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Enterprise Health Index: Median-based, Three-Tier Alerts, and Department Aggregation.
+    Enterprise Health Index: Optimized for millisecond performance.
     """
     org_id = current_user.organization_id
     
-    # 1. Fetch all employee productivity scores for this org
-    metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(
+    # 1. Fetch only necessary scores (Optimized)
+    scores_data = db.query(KPIMetric.productivity_score).join(User, KPIMetric.employee_id == User.id).filter(
         User.organization_id == org_id,
         User.role != UserRole.SUPER_ADMIN
     ).all()
     
-    scores = sorted([m.productivity_score for m in metrics])
+    scores = sorted([s[0] for s in scores_data])
     count = len(scores)
     
-    # Calculate Median
+    # Calculate Median/Avg
     if count == 0:
         median_score = 0.0
         avg_score = 0.0
     else:
         avg_score = sum(scores) / count
-        if count % 2 == 1:
-            median_score = scores[count // 2]
-        else:
-            median_score = (scores[count // 2 - 1] + scores[count // 2]) / 2.0
+        median_score = scores[count // 2] if count % 2 == 1 else (scores[count // 2 - 1] + scores[count // 2]) / 2.0
 
     # 2. Three-Tier Alert System
-    # >75 = Healthy, 60-75 = Warning (amber), <60 = Critical (red)
-    health_status = "HEALTHY"
-    if median_score < 60:
-        health_status = "CRITICAL"
-    elif median_score <= 75:
-        health_status = "WARNING"
+    health_status = "HEALTHY" if median_score > 75 else ("WARNING" if median_score >= 60 else "CRITICAL")
         
     # 3. Department (Unit) Aggregation
     dept_stats = db.query(
@@ -102,20 +94,19 @@ def get_dashboard_summary(
         User.role != UserRole.SUPER_ADMIN
     ).group_by(User.unit).all()
     
-    departments = []
-    for d in dept_stats:
-        if not d.unit: continue
-        departments.append({
+    departments = [
+        {
             "name": d.unit.value if hasattr(d.unit, 'value') else str(d.unit),
             "score": round(d.avg_score or 0, 1),
             "employee_count": d.count,
             "status": "HEALTHY" if (d.avg_score or 0) > 75 else ("WARNING" if (d.avg_score or 0) >= 60 else "CRITICAL")
-        })
+        } for d in dept_stats if d.unit
+    ]
 
-    # Counts
-    project_count = db.query(Project).filter(Project.organization_id == org_id).count()
-    active_projects = db.query(Project).filter(Project.organization_id == org_id, Project.status != "COMPLETED").count()
-    pending_tasks = db.query(Task).join(User, Task.assigned_user == User.id).filter(
+    # Optimized counts
+    project_count = db.query(Project.id).filter(Project.organization_id == org_id).count()
+    active_projects = db.query(Project.id).filter(Project.organization_id == org_id, Project.status != "COMPLETED").count()
+    pending_tasks = db.query(Task.id).join(User, Task.assigned_user == User.id).filter(
         User.organization_id == org_id, 
         Task.status != "DONE"
     ).count()
@@ -183,34 +174,42 @@ def calculate_all_kpis(
     from routes_conf.routers.kpi_forms import sync_all_kpis
     sync_all_kpis(db)
     return {"message": "All metrics calculated successfully"}
+
+# --- Full Dashboard Caching ---
+_full_dashboard_cache = {}
+_CACHE_TTL = 15 # Seconds
+
 @router.get("/dashboard-full")
 def get_full_dashboard_data(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Hyper-optimized 'Single-Query' dashboard endpoint.
-    Retrieves the entire organizational state in one database execution
-    using PostgreSQL JSON aggregation for maximum speed.
+    Consolidated dashboard data with TTL Caching for extreme performance.
     """
-    from sqlalchemy import text
-    from fastapi.responses import JSONResponse
-    
+    import time
     org_id = current_user.organization_id
+    cache_key = f"dashboard_{org_id}_{current_user.role}"
     
-    # We use explicit column selection to avoid SQLAlchemy's automatic object mapping
-    # which was causing Pydantic serialization errors.
-    sql = text("""
+    # Check Cache
+    if cache_key in _full_dashboard_cache:
+        data, ts = _full_dashboard_cache[cache_key]
+        if time.time() - ts < _CACHE_TTL:
+            return data
+
+    from sqlalchemy import text
+    
+    query = text("""
         SELECT json_build_object(
             'summary', (
                 SELECT json_build_object(
-                    'employee_count', COUNT(u.id) FILTER (WHERE u.role = 'EMPLOYEE' AND u.role != 'SUPER_ADMIN'),
+                    'employee_count', COUNT(u.id) FILTER (WHERE u.role = 'EMPLOYEE'),
                     'project_count', (SELECT COUNT(*) FROM projects WHERE organization_id = :org_id),
                     'active_project_count', (SELECT COUNT(*) FROM projects WHERE organization_id = :org_id AND status != 'COMPLETED'),
                     'pending_tasks_count', (SELECT COUNT(t.id) FROM tasks t JOIN users tu ON t.assigned_user = tu.id WHERE tu.organization_id = :org_id AND t.status != 'DONE'),
-                    'avg_productivity', ROUND(COALESCE(AVG(m.productivity_score), 0)::numeric, 1),
-                    'avg_completion', ROUND(COALESCE(AVG(m.task_completion_rate), 0)::numeric, 1),
-                    'avg_efficiency', ROUND(COALESCE(AVG(m.efficiency_score), 0)::numeric, 1)
+                    'avg_productivity', COALESCE(ROUND(AVG(m.productivity_score)::numeric, 1), 0),
+                    'avg_completion', COALESCE(ROUND(AVG(m.task_completion_rate)::numeric, 1), 0),
+                    'avg_efficiency', COALESCE(ROUND(AVG(m.efficiency_score)::numeric, 1), 0)
                 )
                 FROM users u
                 LEFT JOIN kpi_metrics m ON u.id = m.employee_id
@@ -218,8 +217,8 @@ def get_full_dashboard_data(
             ),
             'projects', (
                 SELECT COALESCE(json_agg(p), '[]'::json) FROM (
-                    SELECT id, name, status, start_date, deadline, organization_id, client_id FROM projects 
-                    WHERE organization_id = :org_id 
+                    SELECT id, name, description, status, start_date, deadline, organization_id, client_id, manager_id, logo_url
+                    FROM projects WHERE organization_id = :org_id
                     ORDER BY id DESC
                 ) p
             ),
@@ -249,8 +248,8 @@ def get_full_dashboard_data(
             ),
             'clients', (
                 SELECT COALESCE(json_agg(c), '[]'::json) FROM (
-                    SELECT id, business_name as name, email, location as industry, organization_id FROM clients 
-                    WHERE organization_id = :org_id
+                    SELECT id, business_name, contact_person, email, phone, status 
+                    FROM clients WHERE organization_id = :org_id
                 ) c
             ),
             'questions', (
