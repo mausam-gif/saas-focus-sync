@@ -53,56 +53,33 @@ export default function AdminDashboard() {
 
     const loadData = useCallback(async () => {
         if (!user) return;
-        setLoading(true);
+        
+        // INSTANT LOAD: Check for cached data in session storage
+        const cacheKey = `dashboard_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                processDashboardData(parsed);
+                // Don't show global loading if we have cache
+                setLoading(false);
+            } catch (e) {
+                console.error("Cache parse failed", e);
+            }
+        } else {
+            setLoading(true);
+        }
+
         try {
             // PHASE 1: Combined High-Performance Data Fetch
             const res = await api.get('analytics/dashboard-full');
             const data = res.data;
-            const summary = data.summary || {};
-
-            // 1. Set Stats
-            setStats({
-                employees: summary.employee_count || 0,
-                projects: summary.active_project_count || 0,
-                avgProductivity: summary.avg_productivity || 0,
-            });
-
-            // 2. Process Projects & Gantt
-            const projectData = data.projects || [];
-            setProjects(projectData);
-            const fetchedTasks = projectData.map((p: any) => {
-                let progress = 20;
-                let customClass = 'bar-analysis';
-                const s = p.status?.toUpperCase();
-                if (s === 'EVALUATION' || s === 'COMPLETED') { progress = 100; customClass = 'bar-evaluation'; }
-                else if (s === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
-                else if (s === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
-                else if (s === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
-                else { progress = 20; customClass = 'bar-analysis'; }
-
-                return {
-                    id: `Project-${p.id}`,
-                    name: p.name,
-                    start: p.start_date.split('T')[0],
-                    end: p.deadline.split('T')[0],
-                    progress, dependencies: '', custom_class: customClass
-                };
-            });
-            setTasks(fetchedTasks);
-
-            // 3. Process Users & Team
-            const userData = data.users || [];
-            const allEmployees = userData.filter((u: any) => u.role.toUpperCase() === 'EMPLOYEE');
-            const allManagers = userData.filter((u: any) => u.role.toUpperCase() === 'MANAGER');
-            setManagers(allManagers);
-            setTeam(allEmployees);
-            setAllUsers(userData.filter((u: any) => u.id !== user?.id));
-
-            // 4. Set Tasks & Metrics & Clients & Questions
-            setSentTasks(data.tasks || []);
-            setKpiMetrics(data.metrics || []);
-            setQuestions(data.questions || []);
-            setClients(data.clients || []);
+            
+            // Update UI
+            processDashboardData(data);
+            
+            // Save to Cache for next time
+            sessionStorage.setItem(cacheKey, JSON.stringify(data));
 
         } catch (error) {
             console.error("Failed to load dashboard data", error);
@@ -110,6 +87,54 @@ export default function AdminDashboard() {
             setLoading(false);
         }
     }, [user]);
+
+    const processDashboardData = (data: any) => {
+        const summary = data.summary || {};
+
+        // 1. Set Stats
+        setStats({
+            employees: summary.employee_count || 0,
+            projects: summary.active_project_count || 0,
+            avgProductivity: summary.avg_productivity || 0,
+        });
+
+        // 2. Process Projects & Gantt
+        const projectData = data.projects || [];
+        setProjects(projectData);
+        const fetchedTasks = projectData.map((p: any) => {
+            let progress = 20;
+            let customClass = 'bar-analysis';
+            const s = p.status?.toUpperCase();
+            if (s === 'EVALUATION' || s === 'COMPLETED') { progress = 100; customClass = 'bar-evaluation'; }
+            else if (s === 'ITERATION') { progress = 80; customClass = 'bar-iteration'; }
+            else if (s === 'EXECUTION') { progress = 60; customClass = 'bar-execution'; }
+            else if (s === 'STRATEGY') { progress = 40; customClass = 'bar-strategy'; }
+            else { progress = 20; customClass = 'bar-analysis'; }
+
+            return {
+                id: `Project-${p.id}`,
+                name: p.name,
+                start: p.start_date.split('T')[0],
+                end: p.deadline.split('T')[0],
+                progress, dependencies: '', custom_class: customClass
+            };
+        });
+        setTasks(fetchedTasks);
+
+        // 3. Process Users & Team
+        const userData = data.users || [];
+        const allEmployees = userData.filter((u: any) => u.role.toUpperCase() === 'EMPLOYEE');
+        const allManagers = userData.filter((u: any) => u.role.toUpperCase() === 'MANAGER');
+        setManagers(allManagers);
+        setTeam(allEmployees);
+        setAllUsers(userData.filter((u: any) => u.id !== user?.id));
+
+        // 4. Set Tasks & Metrics & Clients & Questions
+        setSentTasks(data.tasks || []);
+        setKpiMetrics(data.metrics || []);
+        setQuestions(data.questions || []);
+        setClients(data.clients || []);
+    };
 
     useEffect(() => {
         if (!authLoading && !user) {

@@ -145,64 +145,78 @@ def calculate_all_kpis(
     sync_all_kpis(db)
     return {"message": "All metrics calculated successfully"}
 @router.get("/dashboard-full")
+@router.get("/dashboard-full")
 def get_full_dashboard_data(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Consolidated endpoint for all dashboard data to eliminate network waterfall.
-    Returns summary, projects, users, tasks, metrics, questions, and clients in one go.
+    Hyper-optimized 'Single-Query' dashboard endpoint.
+    Retrieves the entire organizational state in one database execution
+    using PostgreSQL JSON aggregation for maximum speed.
     """
+    from sqlalchemy import text
+    import json
+    
     org_id = current_user.organization_id
     
-    # 1. Reuse summary logic
-    from sqlalchemy import select
-    summary_data = db.execute(select(
-        func.count(User.id).filter(User.role == UserRole.EMPLOYEE).label("employee_count"),
-        select(func.count(Project.id)).where(Project.organization_id == org_id).scalar_subquery().label("project_count"),
-        select(func.count(Project.id)).where(Project.organization_id == org_id, Project.status != "COMPLETED").scalar_subquery().label("active_projects"),
-        select(func.count(Task.id)).join(User, Task.assigned_user == User.id).where(User.organization_id == org_id, Task.status != "DONE").scalar_subquery().label("pending_tasks"),
-        func.avg(KPIMetric.productivity_score).label("avg_prod"),
-        func.avg(KPIMetric.task_completion_rate).label("avg_comp"),
-        func.avg(KPIMetric.efficiency_score).label("avg_eff")
-    ).select_from(User).outerjoin(KPIMetric, User.id == KPIMetric.employee_id).where(User.organization_id == org_id)).first()
-
-    summary = {
-        "employee_count": summary_data.employee_count or 0,
-        "project_count": summary_data.project_count or 0,
-        "active_project_count": summary_data.active_projects or 0,
-        "pending_tasks_count": summary_data.pending_tasks or 0,
-        "avg_productivity": round(summary_data.avg_prod or 0, 1),
-        "avg_completion": round(summary_data.avg_comp or 0, 1),
-        "avg_efficiency": round(summary_data.avg_eff or 0, 1)
-    }
-
-    # 2. Fetch all other entities in parallel (SQLAlchemy handles this efficiently)
-    projects = db.query(Project).filter(Project.organization_id == org_id).all()
-    users = db.query(User).filter(User.organization_id == org_id).all()
+    # This single SQL query fetches EVERYTHING at once in a single database roundtrip.
+    # It aggregates summary stats, projects, users, tasks, metrics, and clients into a JSON object.
+    sql = text("""
+        SELECT json_build_object(
+            'summary', (
+                SELECT json_build_object(
+                    'employee_count', COUNT(u.id) FILTER (WHERE u.role = 'EMPLOYEE'),
+                    'project_count', (SELECT COUNT(*) FROM projects WHERE organization_id = :org_id),
+                    'active_project_count', (SELECT COUNT(*) FROM projects WHERE organization_id = :org_id AND status != 'COMPLETED'),
+                    'pending_tasks_count', (SELECT COUNT(t.id) FROM tasks t JOIN users tu ON t.assigned_user = tu.id WHERE tu.organization_id = :org_id AND t.status != 'DONE'),
+                    'avg_productivity', ROUND(COALESCE(AVG(m.productivity_score), 0)::numeric, 1),
+                    'avg_completion', ROUND(COALESCE(AVG(m.task_completion_rate), 0)::numeric, 1),
+                    'avg_efficiency', ROUND(COALESCE(AVG(m.efficiency_score), 0)::numeric, 1)
+                )
+                FROM users u
+                LEFT JOIN kpi_metrics m ON u.id = m.employee_id
+                WHERE u.organization_id = :org_id
+            ),
+            'projects', (
+                SELECT COALESCE(json_agg(p), '[]'::json) FROM (
+                    SELECT * FROM projects WHERE organization_id = :org_id ORDER BY created_at DESC
+                ) p
+            ),
+            'users', (
+                SELECT COALESCE(json_agg(u), '[]'::json) FROM (
+                    SELECT id, name, email, role, unit, phone, location, designation, manager_id FROM users WHERE organization_id = :org_id
+                ) u
+            ),
+            'tasks', (
+                SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+                    SELECT t.* FROM tasks t 
+                    JOIN users u ON t.assigned_user = u.id 
+                    WHERE u.organization_id = :org_id 
+                    ORDER BY t.created_at DESC LIMIT 10
+                ) t
+            ),
+            'metrics', (
+                SELECT COALESCE(json_agg(m), '[]'::json) FROM (
+                    SELECT m.* FROM kpi_metrics m
+                    JOIN users u ON m.employee_id = u.id
+                    WHERE u.organization_id = :org_id
+                ) m
+            ),
+            'clients', (
+                SELECT COALESCE(json_agg(c), '[]'::json) FROM (
+                    SELECT * FROM clients WHERE organization_id = :org_id
+                ) c
+            ),
+            'questions', (
+                SELECT COALESCE(json_agg(q), '[]'::json) FROM (
+                    SELECT q.* FROM questions q
+                    JOIN users u ON q.target_employee = u.id
+                    WHERE u.organization_id = :org_id
+                ) q
+            )
+        )
+    """)
     
-    # Tasks where user is in org
-    tasks = db.query(Task).join(User, Task.assigned_user == User.id).filter(User.organization_id == org_id).order_by(Task.created_at.desc()).limit(10).all()
-    
-    # KPI Metrics
-    metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(User.organization_id == org_id).all()
-    
-    # Clients
-    from db.models import Client
-    clients = db.query(Client).filter(Client.organization_id == org_id).all()
-
-    # Questions
-    from db.models import Question
-    questions = db.query(Question).join(User, Question.target_employee == User.id).filter(User.organization_id == org_id).all()
-
-    # Format result using jsonable_encoder to avoid PydanticSerializationError with SQLAlchemy models
-    from fastapi.encoders import jsonable_encoder
-    return jsonable_encoder({
-        "summary": summary,
-        "projects": projects,
-        "users": users,
-        "tasks": tasks,
-        "metrics": metrics,
-        "clients": clients,
-        "questions": questions
-    })
+    result = db.execute(sql, {"org_id": org_id}).scalar()
+    return result
