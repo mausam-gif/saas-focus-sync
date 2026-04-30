@@ -176,8 +176,11 @@ def get_user_status(
         Task.status != "DONE"
     ).count()
 
-    # 3. Active Projects
-    active_projects = db.query(Project).filter(Project.status != "COMPLETED").count()
+    # 3. Active Projects (Isolated by Org)
+    active_projects = db.query(Project).filter(
+        Project.organization_id == current_user.organization_id,
+        Project.status != "COMPLETED"
+    ).count()
 
     # 4. KPI Score (Average of primary metrics)
     kpi_metric = db.query(KPIMetric).filter(KPIMetric.employee_id == current_user.id).first()
@@ -186,11 +189,13 @@ def get_user_status(
     else:
         own_score = 0.0
 
-    # 5. Company KPI (for privileged)
+    # 5. Company KPI (for privileged, Isolated by Org)
     company_avg = None
     is_company_red = False
     if current_user.role in [UserRole.ADMIN, UserRole.MANAGER]:
-        metrics = db.query(KPIMetric).all()
+        metrics = db.query(KPIMetric).join(User, KPIMetric.employee_id == User.id).filter(
+            User.organization_id == current_user.organization_id
+        ).all()
         if metrics:
             avg_val = sum((m.productivity_score + m.task_completion_rate + m.efficiency_score) / 3.0 for m in metrics) / len(metrics)
             company_avg = float(avg_val)
