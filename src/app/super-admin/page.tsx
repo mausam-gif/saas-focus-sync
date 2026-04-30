@@ -173,15 +173,31 @@ export default function SuperAdminDashboard() {
                         <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Platform Administrator</p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-6">
-                    <div className="text-right">
-                        <p className="text-sm font-bold text-gray-900">{user?.name}</p>
-                        <p className="text-[10px] text-gray-500">{user?.email}</p>
+                    <div className="text-right flex items-center space-x-4">
+                        <button 
+                            onClick={async () => {
+                                if(confirm("This will attempt to add missing columns to the production database. Proceed?")) {
+                                    try {
+                                        const res = await api.post('super-admin/migrate-db-dynamic');
+                                        alert(res.data.message);
+                                    } catch (err) {
+                                        alert("Repair failed. Check logs.");
+                                    }
+                                }
+                            }}
+                            className="text-[10px] font-bold text-amber-600 hover:text-amber-700 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full flex items-center space-x-1 transition-all"
+                        >
+                            <RefreshCcw className="w-3 h-3" />
+                            <span>Repair System Schema</span>
+                        </button>
+                        <div className="text-right">
+                            <p className="text-sm font-bold text-gray-900">{user?.name}</p>
+                            <p className="text-[10px] text-gray-500">{user?.email}</p>
+                        </div>
+                        <button onClick={logout} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                            <LogOut className="w-5 h-5" />
+                        </button>
                     </div>
-                    <button onClick={logout} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                        <LogOut className="w-5 h-5" />
-                    </button>
-                </div>
             </nav>
 
             <main className="p-8 max-w-7xl mx-auto space-y-8">
