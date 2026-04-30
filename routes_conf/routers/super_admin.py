@@ -13,8 +13,18 @@ def get_organizations(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_super_admin),
 ) -> Any:
-    """List all organizations (Super Admin only)."""
-    return db.query(Organization).all()
+    """List all organizations with their initial admin details."""
+    orgs = db.query(Organization).all()
+    res = []
+    for org in orgs:
+        # Find the first admin (smallest ID)
+        admin = db.query(User).filter(User.organization_id == org.id, User.role == UserRole.ADMIN).order_by(User.id).first()
+        org_data = OrganizationResponse.model_validate(org)
+        if admin:
+            org_data.admin_email = admin.email
+            org_data.admin_name = admin.name
+        res.append(org_data)
+    return res
 
 @router.post("/organizations", response_model=OrganizationResponse)
 def create_organization(
@@ -92,6 +102,20 @@ def update_organization(
         raise HTTPException(status_code=404, detail="Organization not found")
     
     update_data = org_in.model_dump(exclude_unset=True)
+    
+    # Handle Admin Updates
+    admin_email = update_data.pop("admin_email", None)
+    admin_name = update_data.pop("admin_name", None)
+    admin_password = update_data.pop("admin_password", None)
+    
+    if admin_email or admin_name or admin_password:
+        admin = db.query(User).filter(User.organization_id == org_id, User.role == UserRole.ADMIN).order_by(User.id).first()
+        if admin:
+            if admin_email: admin.email = admin_email
+            if admin_name: admin.name = admin_name
+            if admin_password: admin.hashed_password = get_password_hash(admin_password)
+            db.add(admin)
+
     for field, value in update_data.items():
         setattr(db_org, field, value)
     

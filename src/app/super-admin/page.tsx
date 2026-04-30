@@ -116,11 +116,14 @@ export default function SuperAdminDashboard() {
             await api.put(`super-admin/organizations/${editOrgForm.id}`, {
                 name: editOrgForm.name,
                 slug: editOrgForm.slug,
-                subscription_expires_at: editOrgForm.subscription_expires_at || null
+                subscription_expires_at: editOrgForm.subscription_expires_at || null,
+                admin_name: editOrgForm.admin_name,
+                admin_email: editOrgForm.admin_email,
+                admin_password: editOrgForm.admin_password || null
             });
             setIsEditingOrg(false);
             fetchOrganizations();
-            alert("Organization updated!");
+            alert("Organization and Admin updated successfully!");
         } catch (err) { alert("Update failed"); }
     };
 
@@ -437,6 +440,33 @@ export default function SuperAdminDashboard() {
                                     <input required type="text" value={editOrgForm.slug} 
                                         onChange={e => setEditOrgForm({...editOrgForm, slug: e.target.value.toLowerCase().replace(/ /g, '-')})}
                                         className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-4">
+                                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Initial Admin Details</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-gray-400 uppercase">Admin Name</label>
+                                        <input required type="text" value={editOrgForm.admin_name || ''}
+                                            onChange={e => setEditOrgForm({...editOrgForm, admin_name: e.target.value})}
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                            placeholder="Admin Full Name" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-gray-400 uppercase">Admin Email</label>
+                                        <input required type="email" value={editOrgForm.admin_email || ''}
+                                            onChange={e => setEditOrgForm({...editOrgForm, admin_email: e.target.value})}
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                            placeholder="admin@acme.com" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-gray-400 uppercase">New Password (Optional)</label>
+                                    <input type="password" value={editOrgForm.admin_password || ''}
+                                        onChange={e => setEditOrgForm({...editOrgForm, admin_password: e.target.value})}
+                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                        placeholder="Leave blank to keep current password" />
                                 </div>
                             </div>
 
