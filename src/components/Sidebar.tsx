@@ -130,18 +130,33 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
             </div>
 
             <div className="px-4 mb-4">
-                <div onClick={() => router.push('/settings')} className={`bg-gray-50/50 rounded-2xl border ${status?.is_kpi_red ? 'border-red-200 bg-red-50/30' : 'border-gray-100'} p-3 flex items-center space-x-3 cursor-pointer hover:bg-white hover:shadow-md transition-all`}>
-                    <div className={`w-9 h-9 rounded-full ${status?.is_kpi_red ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-700'} flex items-center justify-center font-bold text-sm`}>
+                <div 
+                    onClick={() => router.push('/settings')} 
+                    className={`group rounded-2xl border p-3.5 flex items-center space-x-3 cursor-pointer transition-all duration-300
+                        ${(status?.is_kpi_red && user?.role !== 'ADMIN') 
+                            ? 'border-red-200 bg-red-50/40 hover:bg-red-50/60 shadow-sm shadow-red-100' 
+                            : 'border-gray-100 bg-white hover:bg-gray-50 hover:shadow-lg hover:shadow-indigo-100/30'}`}
+                >
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-base shadow-inner transition-transform group-hover:scale-105
+                        ${user?.role === 'ADMIN' ? 'bg-amber-100 text-amber-700' : 
+                          user?.role === 'MANAGER' ? 'bg-purple-100 text-purple-700' :
+                          (status?.is_kpi_red && user?.role !== 'ADMIN') ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-700'}`}
+                    >
                         {user?.name?.[0] || 'U'}
                     </div>
+                    
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate">{user?.name || 'User'}</p>
-                        <div className="flex items-center gap-1.5 overflow-hidden">
-                            <span className="text-[10px] text-gray-500 font-semibold truncate lowercase tracking-tight">
-                                {user?.role.toLowerCase()}
+                        <p className="text-sm font-extrabold text-gray-900 truncate leading-tight group-hover:text-indigo-600 transition-colors">
+                            {user?.name || 'User'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider
+                                ${user?.role === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 
+                                  user?.role === 'MANAGER' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
+                                {user?.role.toLowerCase() === 'admin' ? 'Owner' : user?.role.toLowerCase()}
                             </span>
-                            {status?.is_kpi_red && (
-                                <span className="flex items-center gap-0.5 text-[9px] font-black text-red-600 uppercase tracking-tighter">
+                            {(status?.is_kpi_red && user?.role !== 'ADMIN') && (
+                                <span className="flex items-center gap-0.5 text-[9px] font-black text-red-600 uppercase animate-pulse">
                                     <AlertTriangle className="w-2.5 h-2.5" /> LOW KPI
                                 </span>
                             )}
