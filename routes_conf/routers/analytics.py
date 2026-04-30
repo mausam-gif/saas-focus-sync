@@ -260,7 +260,7 @@ def get_full_dashboard_data(
             ),
             'clients', (
                 SELECT COALESCE(json_agg(c), '[]'::json) FROM (
-                    SELECT id, business_name, contact_person, email, phone, status 
+                    SELECT id, business_name, primary_contact_name, email, phone, status 
                     FROM clients WHERE organization_id = :org_id
                 ) c
             ),

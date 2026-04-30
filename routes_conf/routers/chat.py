@@ -261,7 +261,7 @@ def unsend_message(
 
 @router.delete("/admin/clear")
 def clear_messages(
-    scope: str = Query(..., regex="^(group|dm_all|dm_user)$"),
+    scope: str = Query(..., pattern="^(group|dm_all|dm_user)$"),
     target_user_id: Optional[int] = None,
     before_date: Optional[datetime] = None,
     db: Session = Depends(deps.get_db),
