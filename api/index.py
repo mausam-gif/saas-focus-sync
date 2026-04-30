@@ -62,23 +62,21 @@ from core.config import settings
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-@app.get("/")
-def root(db: Session = Depends(deps.get_db)):
+@app.get("/api/migrate")
+def manual_migrate(db: Session = Depends(deps.get_db)):
     try:
         from sqlalchemy import text
-        # Emergency Migration for Task Priority
-        db.execute(text("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'taskpriority') THEN CREATE TYPE taskpriority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL'); END IF; END $$;"))
-        db.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority taskpriority DEFAULT 'MEDIUM' NOT NULL;"))
-        
-        # New Emergency Migration for Dynamic Settings
         from db.session import Base, engine
         Base.metadata.create_all(bind=engine)
         
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER"))
         db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER"))
-        
         db.commit()
-        return {"message": "Vast Focus Sync API - MIGRATED V3", "database": "CONNECTED"}
+        return {"status": "MIGRATED_V3", "database": "CONNECTED"}
     except Exception as e:
-        return {"message": "Vast Focus Sync API - ONLINE", "database": "ERROR", "detail": str(e)}
+        return {"status": "ERROR", "detail": str(e)}
+
+@app.get("/")
+def root(db: Session = Depends(deps.get_db)):
+    return {"message": "Vast Focus Sync API - ONLINE"}
 
