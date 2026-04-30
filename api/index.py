@@ -71,11 +71,14 @@ def root(db: Session = Depends(deps.get_db)):
         db.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority taskpriority DEFAULT 'MEDIUM' NOT NULL;"))
         
         # New Emergency Migration for Dynamic Settings
+        from db.session import Base, engine
+        Base.metadata.create_all(bind=engine)
+        
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER"))
         db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER"))
         
         db.commit()
-        return {"message": "Vast Focus Sync API - MIGRATED V2", "database": "CONNECTED"}
+        return {"message": "Vast Focus Sync API - MIGRATED V3", "database": "CONNECTED"}
     except Exception as e:
         return {"message": "Vast Focus Sync API - ONLINE", "database": "ERROR", "detail": str(e)}
 
