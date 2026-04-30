@@ -240,3 +240,19 @@ def get_all_designations(
     """Get all unique designations used in the system."""
     res = db.query(User.designation).filter(User.designation != None).distinct().all()
     return [r[0] for r in res]
+@router.post("/repair-db")
+def repair_db(db: Session = Depends(deps.get_db)):
+    """Final repair endpoint to create all tables and columns."""
+    from sqlalchemy import text
+    from db.session import Base, engine
+    try:
+        # 1. Create all missing tables
+        Base.metadata.create_all(bind=engine)
+        # 2. Add missing columns to existing tables
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER"))
+        db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER"))
+        db.commit()
+        return {"status": "success", "message": "All tables and columns verified/created."}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
