@@ -292,8 +292,14 @@ def get_chat_users(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
-    """Get all users."""
-    users = db.query(User).filter(User.id != current_user.id).all()
+    """Get all users with multi-tenant isolation."""
+    query = db.query(User).filter(User.id != current_user.id)
+    
+    if current_user.role.value != "SUPER_ADMIN":
+        query = query.filter(User.organization_id == current_user.organization_id)
+        query = query.filter(User.role != "SUPER_ADMIN")
+        
+    users = query.all()
     return [{
         "id": u.id,
         "name": u.name,

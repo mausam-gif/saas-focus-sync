@@ -84,7 +84,10 @@ def get_dashboard_summary(
         func.avg(KPIMetric.productivity_score).label("avg_prod"),
         func.avg(KPIMetric.task_completion_rate).label("avg_comp"),
         func.avg(KPIMetric.efficiency_score).label("avg_eff")
-    ).select_from(User).outerjoin(KPIMetric, User.id == KPIMetric.employee_id).where(User.organization_id == org_id)).first()
+    ).select_from(User).outerjoin(KPIMetric, User.id == KPIMetric.employee_id).where(
+        User.organization_id == org_id,
+        User.role != UserRole.SUPER_ADMIN
+    )).first()
 
     return {
         "employee_count": summary.employee_count or 0,
@@ -165,7 +168,7 @@ def get_full_dashboard_data(
         SELECT json_build_object(
             'summary', (
                 SELECT json_build_object(
-                    'employee_count', COUNT(u.id) FILTER (WHERE u.role = 'EMPLOYEE'),
+                    'employee_count', COUNT(u.id) FILTER (WHERE u.role = 'EMPLOYEE' AND u.role != 'SUPER_ADMIN'),
                     'project_count', (SELECT COUNT(*) FROM projects WHERE organization_id = :org_id),
                     'active_project_count', (SELECT COUNT(*) FROM projects WHERE organization_id = :org_id AND status != 'COMPLETED'),
                     'pending_tasks_count', (SELECT COUNT(t.id) FROM tasks t JOIN users tu ON t.assigned_user = tu.id WHERE tu.organization_id = :org_id AND t.status != 'DONE'),
@@ -175,7 +178,7 @@ def get_full_dashboard_data(
                 )
                 FROM users u
                 LEFT JOIN kpi_metrics m ON u.id = m.employee_id
-                WHERE u.organization_id = :org_id
+                WHERE u.organization_id = :org_id AND u.role != 'SUPER_ADMIN'
             ),
             'projects', (
                 SELECT COALESCE(json_agg(p), '[]'::json) FROM (
@@ -187,7 +190,7 @@ def get_full_dashboard_data(
             'users', (
                 SELECT COALESCE(json_agg(u), '[]'::json) FROM (
                     SELECT id, name, email, role, unit, phone, location, designation, manager_id FROM users 
-                    WHERE organization_id = :org_id
+                    WHERE organization_id = :org_id AND role != 'SUPER_ADMIN'
                     ORDER BY id DESC
                 ) u
             ),
@@ -196,7 +199,7 @@ def get_full_dashboard_data(
                     SELECT t.id, t.title, t.description, t.status, t.due_date, t.assigned_user, t.project_id 
                     FROM tasks t 
                     JOIN users u ON t.assigned_user = u.id 
-                    WHERE u.organization_id = :org_id 
+                    WHERE u.organization_id = :org_id AND u.role != 'SUPER_ADMIN'
                     ORDER BY t.id DESC LIMIT 10
                 ) t
             ),
@@ -205,7 +208,7 @@ def get_full_dashboard_data(
                     SELECT m.id, m.employee_id, m.productivity_score, m.task_completion_rate, m.efficiency_score, m.task_score, m.project_score, m.form_score 
                     FROM kpi_metrics m
                     JOIN users u ON m.employee_id = u.id
-                    WHERE u.organization_id = :org_id
+                    WHERE u.organization_id = :org_id AND u.role != 'SUPER_ADMIN'
                 ) m
             ),
             'clients', (

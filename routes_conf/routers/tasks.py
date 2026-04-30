@@ -87,19 +87,24 @@ def read_tasks(
     """Retrieve tasks. Admin sees all; Manager sees tasks they assigned or tasks of their employees; Employee sees only their own."""
     query = db.query(Task)
     
+    # Enforce organization isolation for non-super-admins
+    if current_user.role != UserRole.SUPER_ADMIN:
+        query = query.join(User, Task.assigned_user == User.id).filter(
+            User.organization_id == current_user.organization_id,
+            User.role != UserRole.SUPER_ADMIN
+        )
+
     if project_id:
         query = query.filter(Task.project_id == project_id)
 
     if current_user.role == UserRole.ADMIN:
         tasks = query.offset(skip).limit(limit).all()
     elif current_user.role == UserRole.MANAGER:
-        # Get ALL employee user IDs — managers oversee all employees regardless of manager_id link
-        from sqlalchemy import select as sa_select
-        employee_ids_q = sa_select(User.id).where(User.role == UserRole.EMPLOYEE)
+        # Managers oversee employees within their organization
         tasks = query.filter(
             (Task.assigned_by == current_user.id) |
             (Task.assigned_user == current_user.id) |
-            (Task.assigned_user.in_(employee_ids_q))
+            (User.role == UserRole.EMPLOYEE)
         ).offset(skip).limit(limit).all()
     else:
         # Employee: only their own tasks

@@ -71,6 +71,8 @@ def read_users(
     # Enforce isolation
     if current_user.role != UserRole.SUPER_ADMIN:
         query = query.filter(User.organization_id == current_user.organization_id)
+        # Never show super admins to regular users
+        query = query.filter(User.role != UserRole.SUPER_ADMIN)
         
     if current_user.role in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER]:
         users = query.offset(skip).limit(limit).all()
