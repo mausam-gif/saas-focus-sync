@@ -19,20 +19,29 @@ export default function FeedbackPage() {
 
         if (authLoading || !user) return;
 
+        // 1. Instant Load from Cache (SWR Pattern)
+        const cacheKey = `feedback_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                setResponses(JSON.parse(cachedData));
+                setLoading(false); // Immediate transition to content
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        }
+
         const fetchFeedback = async () => {
+            if (!user) return;
             try {
                 // Fetch questions to get context, then responses
                 const questionsRes = await api.get('questions/');
-                const allResponses: any[] = [];
-
-                for (const q of questionsRes.data) {
-                    const res = await api.get(`questions/`); // Should probably have a separate responses endpoint
-                    // For now, assume the analytics or questions endpoint gives us what we need
-                    // Let's refine the backend to actually return responses for these questions
-                }
-
+                
                 // Temporary: just show questions as "feedback threads"
                 setResponses(questionsRes.data);
+
+                // Update Cache
+                sessionStorage.setItem(cacheKey, JSON.stringify(questionsRes.data));
             } catch (error) {
                 console.error(error);
             } finally {

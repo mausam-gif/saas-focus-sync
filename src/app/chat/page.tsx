@@ -109,19 +109,42 @@ export default function ChatPage() {
             const res = await api.get('chat/inbox');
             setInbox(res.data.dms);
             setGroupUnread(res.data.group_unread);
+
+            // Update Cache
+            if (user) {
+                const cacheKey = `chat_data_${user.id}`;
+                const existing = JSON.parse(sessionStorage.getItem(cacheKey) || '{}');
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                    ...existing,
+                    inbox: res.data.dms,
+                    group_unread: res.data.group_unread,
+                    timestamp: Date.now()
+                }));
+            }
         } catch (err) {
             console.error("Failed to load inbox", err);
         }
-    }, []);
+    }, [user]);
 
     const fetchUsers = useCallback(async () => {
         try {
             const res = await api.get('chat/users');
             setAllUsers(res.data);
+
+            // Update Cache
+            if (user) {
+                const cacheKey = `chat_data_${user.id}`;
+                const existing = JSON.parse(sessionStorage.getItem(cacheKey) || '{}');
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                    ...existing,
+                    allUsers: res.data,
+                    timestamp: Date.now()
+                }));
+            }
         } catch (err) {
             console.error("Failed to load users", err);
         }
-    }, []);
+    }, [user]);
 
     const markAsRead = useCallback(async (contactId?: number) => {
         try {
@@ -138,6 +161,20 @@ export default function ChatPage() {
             return;
         }
         if (user) {
+            // 1. Instant Load from Cache (SWR Pattern)
+            const cacheKey = `chat_data_${user.id}`;
+            const cachedData = sessionStorage.getItem(cacheKey);
+            if (cachedData) {
+                try {
+                    const parsed = JSON.parse(cachedData);
+                    if (parsed.inbox) setInbox(parsed.inbox);
+                    if (parsed.allUsers) setAllUsers(parsed.allUsers);
+                    if (parsed.groupUnread !== undefined) setGroupUnread(parsed.groupUnread);
+                } catch (e) {
+                    console.error("Cache parse error", e);
+                }
+            }
+
             fetchInbox();
             fetchUsers();
             const interval = setInterval(() => {
@@ -146,6 +183,7 @@ export default function ChatPage() {
             return () => clearInterval(interval);
         }
     }, [user, authLoading, router, fetchInbox, fetchUsers]);
+
 
     // Dedicated effect for fetching messages on state change or polling
     useEffect(() => {

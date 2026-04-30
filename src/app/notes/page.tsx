@@ -42,27 +42,44 @@ export default function NotesPage() {
         }
         if (authLoading || !user) return;
 
-        fetchNotes();
-        fetchProjects();
+        // 1. Instant Load from Cache (SWR Pattern)
+        const cacheKey = `notes_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                if (parsed.notes) setNotes(parsed.notes);
+                if (parsed.projects) setProjects(parsed.projects);
+                setIsLoading(false); // Immediate transition to content
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        }
+
+        fetchInitialData();
     }, [user, authLoading, router]);
 
-    const fetchNotes = async () => {
+    const fetchInitialData = async () => {
+        if (!user) return;
         try {
-            const res = await api.get('notes/');
-            setNotes(res.data);
+            const [notesRes, projRes] = await Promise.all([
+                api.get('notes/'),
+                api.get('projects/')
+            ]);
+            setNotes(notesRes.data);
+            setProjects(projRes.data);
+
+            // Update Cache
+            const cacheKey = `notes_data_${user.id}`;
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+                notes: notesRes.data,
+                projects: projRes.data,
+                timestamp: Date.now()
+            }));
         } catch (err) {
             console.error(err);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const fetchProjects = async () => {
-        try {
-            const res = await api.get('projects/');
-            setProjects(res.data);
-        } catch (err) {
-            console.error(err);
         }
     };
 

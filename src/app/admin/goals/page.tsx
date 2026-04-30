@@ -19,7 +19,20 @@ export default function GoalsPage() {
 
         if (authLoading || !user) return;
 
+        // 1. Instant Load from Cache (SWR Pattern)
+        const cacheKey = `goals_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                setProjects(JSON.parse(cachedData));
+                setLoading(false); // Immediate transition to content
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        }
+
         const fetchData = async () => {
+            if (!user) return;
             try {
                 const [projRes, taskRes] = await Promise.all([
                     api.get('projects/'),
@@ -36,6 +49,9 @@ export default function GoalsPage() {
                 });
 
                 setProjects(enrichedProjects);
+
+                // Update Cache
+                sessionStorage.setItem(cacheKey, JSON.stringify(enrichedProjects));
             } catch (error) {
                 console.error(error);
             } finally {

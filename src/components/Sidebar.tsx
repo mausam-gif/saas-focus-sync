@@ -45,18 +45,36 @@ export const Sidebar = ({ setIsSidebarOpen }: SidebarProps) => {
         try {
             const res = await api.get('/users/me/status');
             setStatus(res.data);
+            
+            // Update Cache
+            if (user) {
+                const cacheKey = `sidebar_status_${user.id}`;
+                sessionStorage.setItem(cacheKey, JSON.stringify(res.data));
+            }
         } catch (err) {
             console.error("Failed to fetch sidebar status", err);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (user) {
+            // 1. Instant Load from Cache (SWR Pattern)
+            const cacheKey = `sidebar_status_${user.id}`;
+            const cachedData = sessionStorage.getItem(cacheKey);
+            if (cachedData) {
+                try {
+                    setStatus(JSON.parse(cachedData));
+                } catch (e) {
+                    console.error("Cache parse error", e);
+                }
+            }
+
             fetchStatus();
             const interval = setInterval(fetchStatus, 10000); // 10s polling
             return () => clearInterval(interval);
         }
     }, [user, fetchStatus]);
+
 
     const getLinksByRole = () => {
         if (!user) return [];

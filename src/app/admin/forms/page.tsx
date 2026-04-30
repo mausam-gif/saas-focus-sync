@@ -90,12 +90,53 @@ export default function AdminFormsPage() {
     useEffect(() => {
         if (!authLoading && !user) { router.push('/login'); return; }
         if (!user) return;
-        loadForms();
-        loadAnalytics();
-        api.get('users/').then(res =>
-            setEmployees(res.data.filter((u: any) => u.role?.toUpperCase() === 'EMPLOYEE'))
-        );
-    }, [user, authLoading, router, loadForms, loadAnalytics]);
+
+        // 1. Instant Load from Cache (SWR Pattern)
+        const cacheKey = `forms_data_${user.id}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                setForms(parsed.forms || []);
+                setAnalytics(parsed.analytics || null);
+                setEmployees(parsed.employees || []);
+                // We don't set loading(false) yet because we want fresh data to overlay smoothly
+                // but setting initial states makes the UI render immediately.
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        }
+
+        const fetchInitialData = async () => {
+            try {
+                const [formsRes, analyticsRes, usersRes] = await Promise.all([
+                    api.get('kpi-forms/'),
+                    api.get('kpi-forms/analytics/overview'),
+                    api.get('users/')
+                ]);
+                
+                const formsData = formsRes.data;
+                const analyticsData = analyticsRes.data;
+                const employeesData = usersRes.data.filter((u: any) => u.role?.toUpperCase() === 'EMPLOYEE');
+
+                setForms(formsData);
+                setAnalytics(analyticsData);
+                setEmployees(employeesData);
+
+                // Update Cache
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                    forms: formsData,
+                    analytics: analyticsData,
+                    employees: employeesData,
+                    timestamp: Date.now()
+                }));
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchInitialData();
+    }, [user, authLoading, router]);
 
     const totalWeight = questions.reduce((s, q) => s + q.weight, 0);
 
