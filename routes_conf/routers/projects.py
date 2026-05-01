@@ -32,6 +32,13 @@ def create_project(
         db_doc = ProjectDocument(**doc_in.model_dump(), project_id=project.id)
         db.add(db_doc)
 
+    # Set default project_step_id to the first step of the organization
+    from db.models import ProjectStep
+    first_step = db.query(ProjectStep).filter(ProjectStep.organization_id == current_user.organization_id).order_by(ProjectStep.order.asc()).first()
+    if first_step:
+        project.project_step_id = first_step.id
+        project.status = first_step.name # Ensure string status matches
+    
     db.commit()
     db.refresh(project)
     trigger_project_automation(db, project, is_new=True)
@@ -92,6 +99,16 @@ def update_project(
             setattr(project, field, None)
         else:
             setattr(project, field, value)
+    
+    # Sync project_step_id if status string was updated
+    if "status" in update_data:
+        from db.models import ProjectStep
+        new_step = db.query(ProjectStep).filter(
+            ProjectStep.organization_id == project.organization_id,
+            ProjectStep.name == update_data["status"]
+        ).first()
+        if new_step:
+            project.project_step_id = new_step.id
     
     if documents_data is not None:
         # For simplicity, we'll append new documents. 

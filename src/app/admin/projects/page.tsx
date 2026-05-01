@@ -194,13 +194,19 @@ export default function ProjectsPage() {
     };
 
     const handleStatusUpdate = async (projectId: number, newStatus: string) => {
-        setStatusUpdating(projectId);
+        // Optimistic UI Update: change state immediately so it feels 0ms
+        const originalProjects = [...projects];
+        setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
+        
         try {
             await api.put(`projects/${projectId}`, { status: newStatus });
+            // Optionally fetch to sync exactly with server (e.g. if automation triggered changes)
             fetchProjects();
         } catch (err: any) {
+            // Rollback on error
+            setProjects(originalProjects);
             alert('Failed: ' + (err.response?.data?.detail || err.message));
-        } finally { setStatusUpdating(null); }
+        }
     };
 
     const openEdit = (p: any) => {
