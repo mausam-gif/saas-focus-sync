@@ -68,14 +68,17 @@ def create_organization(
     return db_org
 
 def seed_organization_defaults(db: Session, org_id: int):
-    """Seed an organization with standard default units and project steps."""
+    """Seed an organization with standard default units and project steps. Clears old steps to ensure fresh default."""
     # 1. Default Units
     units = ["PRODUCTION", "CREATIVE_AND_STRATEGY", "GROWTH_AND_ENGAGEMENT", "TEAM_DEVELOPMENT"]
     for u_name in units:
         if not db.query(OrganizationUnit).filter_by(organization_id=org_id, name=u_name).first():
             db.add(OrganizationUnit(organization_id=org_id, name=u_name))
     
-    # 2. Default Steps
+    # 2. Default Steps (Fresh Sync)
+    # Delete old steps for this org to ensure clean new defaults
+    db.query(ProjectStep).filter(ProjectStep.organization_id == org_id).delete()
+    
     steps = [
         ("Briefing", "#A855F7", 1),         # Purple
         ("Pre-Production", "#3B82F6", 2),   # Blue
@@ -85,8 +88,7 @@ def seed_organization_defaults(db: Session, org_id: int):
         ("Final Delivery", "#22C55E", 6)    # Green
     ]
     for name, color, order in steps:
-        if not db.query(ProjectStep).filter_by(organization_id=org_id, name=name).first():
-            db.add(ProjectStep(organization_id=org_id, name=name, color=color, order=order))
+        db.add(ProjectStep(organization_id=org_id, name=name, color=color, order=order))
     
     db.commit()
 
