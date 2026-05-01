@@ -718,29 +718,6 @@ export default function SuperAdminDashboard() {
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    {/* Add Automation Sub-form */}
-                                                    <div className="bg-white p-3 rounded-xl border border-dashed border-gray-200 space-y-2">
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <select value={newAuto.stepId === step.id ? newAuto.designation : ''}
-                                                                onChange={e => setNewAuto({...newAuto, stepId: step.id, designation: e.target.value})}
-                                                                className="text-[10px] p-1.5 border-b border-gray-100 outline-none bg-transparent">
-                                                                <option value="">Select Designation</option>
-                                                                {designations.map(d => <option key={d} value={d}>{d}</option>)}
-                                                                <option value="CUSTOM">+ Add Custom</option>
-                                                            </select>
-                                                            {newAuto.designation === 'CUSTOM' && (
-                                                                <input type="text" placeholder="Custom Designation" 
-                                                                    onBlur={e => setNewAuto({...newAuto, designation: e.target.value})}
-                                                                    className="text-[10px] p-1.5 border-b border-gray-100 outline-none" />
-                                                            )}
-                                                            <input type="text" placeholder="Task Title (e.g. Upload Files)" value={newAuto.stepId === step.id ? newAuto.title : ''}
-                                                                onChange={e => setNewAuto({...newAuto, stepId: step.id, title: e.target.value})}
-                                                                className="text-[10px] p-1.5 border-b border-gray-100 outline-none" />
-                                                        </div>
-                                                        <button onClick={() => handleAddAuto(step.id)} className="w-full text-[10px] font-black text-indigo-600 hover:bg-indigo-50 py-1 rounded transition-colors">
-                                                            + Set Automatic Task Rule
-                                                        </button>
-                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
