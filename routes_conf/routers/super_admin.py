@@ -341,20 +341,51 @@ def repair_db_get(db: Session = Depends(deps.get_db)):
     """GET version for easy browser access."""
     from sqlalchemy import text
     try:
-        # Use existing 'db' session which we know works for regular queries
+        # 1. Patch columns
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER"))
         db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER"))
         db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS priority VARCHAR"))
         db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS due_days_offset INTEGER DEFAULT 1"))
         db.commit()
         
-        # FORCE SEED all organizations to new defaults
-        from db.models import Organization
+        # 2. TOTAL CLEANUP of steps and automations
+        # Delete all automations first (to avoid FK errors)
+        db.execute(text("DELETE FROM step_automations"))
+        # Delete all existing steps
+        db.execute(text("DELETE FROM project_steps"))
+        
+        # 3. FRESH SEED all organizations
+        from db.models import Organization, ProjectStep, Project
         orgs = db.query(Organization).all()
+        
+        steps_to_add = [
+            ("Briefing", "#A855F7", 1),
+            ("Pre-Production", "#3B82F6", 2),
+            ("Production", "#0D9488", 3),
+            ("Post-Production", "#F59E0B", 4),
+            ("Review & Revision", "#F43F5E", 5),
+            ("Final Delivery", "#22C55E", 6)
+        ]
+
         for org in orgs:
-            seed_organization_defaults(db, org.id)
+            # Create new steps
+            new_steps = []
+            for name, color, order in steps_to_add:
+                s = ProjectStep(organization_id=org.id, name=name, color=color, order=order)
+                db.add(s)
+                new_steps.append(s)
             
-        return {"status": "success", "message": "Database schema patched and ALL organizations updated to new professional steps."}
+            db.flush() # Get step IDs
+            
+            # Point all projects in this org to the FIRST step (Briefing)
+            if new_steps:
+                db.query(Project).filter(Project.organization_id == org.id).update(
+                    {Project.project_step_id: new_steps[0].id},
+                    synchronize_session=False
+                )
+            
+        db.commit()
+        return {"status": "success", "message": "TOTAL CLEANUP COMPLETE: All organizations updated to 6 professional steps."}
     except Exception as e:
         db.rollback()
         return {"status": "error", "message": str(e)}
