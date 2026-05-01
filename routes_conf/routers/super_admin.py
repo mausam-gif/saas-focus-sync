@@ -337,8 +337,10 @@ def repair_db_get(db: Session = Depends(deps.get_db)):
         Base.metadata.create_all(bind=engine)
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER"))
         db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER"))
+        db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS priority VARCHAR"))
+        db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS due_days_offset INTEGER DEFAULT 1"))
         db.commit()
-        return {"status": "success", "message": "All tables and columns verified/created."}
+        return {"status": "success", "message": "All tables and columns verified/created (Step Automations patched)."}
     except Exception as e:
         db.rollback()
         return {"status": "error", "message": str(e)}
