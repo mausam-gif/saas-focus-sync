@@ -77,11 +77,12 @@ def seed_organization_defaults(db: Session, org_id: int):
     
     # 2. Default Steps
     steps = [
-        ("ANALYSIS", "#3B82F6", 1),
-        ("STRATEGY", "#A855F7", 2),
-        ("EXECUTION", "#F97316", 3),
-        ("ITERATION", "#EAB308", 4),
-        ("EVALUATION", "#22C55E", 5)
+        ("Briefing", "#A855F7", 1),         # Purple
+        ("Pre-Production", "#3B82F6", 2),   # Blue
+        ("Production", "#0D9488", 3),       # Teal
+        ("Post-Production", "#F59E0B", 4),  # Amber
+        ("Review & Revision", "#F43F5E", 5),# Coral
+        ("Final Delivery", "#22C55E", 6)    # Green
     ]
     for name, color, order in steps:
         if not db.query(ProjectStep).filter_by(organization_id=org_id, name=name).first():

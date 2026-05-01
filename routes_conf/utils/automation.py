@@ -3,115 +3,133 @@ from db.models import Task, User, Project, TaskStatus, KPIFormAssignment
 from datetime import datetime, timedelta, timezone
 
 # Task Mapping: designation -> stage -> list of tasks
-# Stages: ANALYSIS, STRATEGY, EXECUTION, ITERATION, EVALUATION
+# New Stages: BRIEFING, PRE-PRODUCTION, PRODUCTION, POST-PRODUCTION, REVIEW & REVISION, FINAL DELIVERY
 TASK_MAPPING = {
     "manager": {
-        "ANALYSIS": [
+        "BRIEFING": [
             {"title": "The Discovery Interview", "description": "Lead a deep-dive with the client to find their 'Pain Point.'"},
             {"title": "The 'Core Message' Extraction", "description": "Distill the client's rambling ideas into one single, powerful sentence."}
         ],
-        "STRATEGY": [
+        "PRE-PRODUCTION": [
             {"title": "Visual Tone Selection", "description": "Decide if the project should be 'High-Energy/Fast' or 'Soulful/Cinematic' based on personality."},
             {"title": "Budget & Timeline Alignment", "description": "Confirm exact delivery date and ensure scope fits NPR budget."}
         ],
-        "EXECUTION": [
+        "PRODUCTION": [
             {"title": "Resource Oversight", "description": "Check if videographers and designers have the gear/assets they need."},
             {"title": "Client updates", "description": "Provide a mid-execution update to the client on project status."}
         ],
-        "ITERATION": [
+        "POST-PRODUCTION": [
+            {"title": "First Draft Review", "description": "Review the initial assembly and ensure it aligns with the core message."}
+        ],
+        "REVIEW & REVISION": [
             {"title": "Feedback Loop", "description": "Review the first draft and compile client/internal feedback for the team."}
         ],
-        "EVALUATION": [
+        "FINAL DELIVERY": [
             {"title": "Project Debrief", "description": "Conduct a post-mortem to discuss what went well and what can be improved for next project."}
         ]
     },
     "designer": {
-        "ANALYSIS": [
+        "BRIEFING": [
             {"title": "Brand Audit", "description": "Collect existing logos, fonts, and color hex codes. Ensure they aren't outdated."},
             {"title": "Competitor Visual Analysis", "description": "Research 3 competitors in Birtamode/Nepal to ensure our design stands out."}
         ],
-        "STRATEGY": [
+        "PRE-PRODUCTION": [
             {"title": "Mood Boarding", "description": "Create a 'Look-and-Feel' collage (colors, lighting styles, textures) for client review."}
         ],
-        "EXECUTION": [
+        "PRODUCTION": [
             {"title": "Asset Creation", "description": "Design primary visual assets based on the approved mood board."}
         ],
-        "ITERATION": [
+        "POST-PRODUCTION": [
             {"title": "Design Refinement", "description": "Apply feedback from the manager to the visual designs."}
         ],
-        "EVALUATION": [
+        "REVIEW & REVISION": [
+            {"title": "Revision Polish", "description": "Apply final visual tweaks based on client feedback."}
+        ],
+        "FINAL DELIVERY": [
             {"title": "Final Asset Export", "description": "Organize and export final source files and deliverables."}
         ]
     },
     "social media manager": {
-        "ANALYSIS": [
+        "BRIEFING": [
             {"title": "Platform Research", "description": "Determine where the client's audience lives (TikTok? Facebook? Instagram?). Audit previous posts."},
             {"title": "Trend Gap Analysis", "description": "Find what is currently 'missing' in the client's niche."}
         ],
-        "STRATEGY": [
+        "PRE-PRODUCTION": [
             {"title": "Hook Identification", "description": "Identify 3 potential 'Hooks' that will stop the scroll for this specific target audience."}
         ],
-        "EXECUTION": [
+        "PRODUCTION": [
             {"title": "Content Distribution Plan", "description": "Draft the posting schedule and caption styles for the campaign."}
         ],
-        "ITERATION": [
+        "POST-PRODUCTION": [
             {"title": "Engagement Tuning", "description": "Adjust hooks or captions based on early team feedback or test results."}
         ],
-        "EVALUATION": [
+        "REVIEW & REVISION": [
+            {"title": "Caption Revisions", "description": "Finalize copy and hooks based on internal review."}
+        ],
+        "FINAL DELIVERY": [
             {"title": "Performance Report", "description": "Prepare a summary of projected reach and engagement based on content quality."}
         ]
     },
     "editor": {
-        "ANALYSIS": [
+        "BRIEFING": [
             {"title": "Technical Audit", "description": "Review raw footage requirements and ensure hardware/software readiness."}
         ],
-        "STRATEGY": [
+        "PRE-PRODUCTION": [
             {"title": "Style Matching", "description": "Watch client's favorite 'Reference Videos' and determine technical difficulty (e.g., 3D tracking)."},
             {"title": "Storage Estimation", "description": "Calculate data generation (e.g., 3 hours 4K = 200GB). Ensure SSDs are ready."}
         ],
-        "EXECUTION": [
+        "PRODUCTION": [
             {"title": "Rough Cut Assembly", "description": "Complete the first assembly of the project including sync and basic cuts."}
         ],
-        "ITERATION": [
+        "POST-PRODUCTION": [
             {"title": "Color/Audio Polish", "description": "Finalize color grading and sound design after cut approval."}
         ],
-        "EVALUATION": [
+        "REVIEW & REVISION": [
+            {"title": "Correction Cycle", "description": "Apply specific time-coded feedback from the client."}
+        ],
+        "FINAL DELIVERY": [
             {"title": "Master Render", "description": "Perform high-quality master render and upload to delivery folder."}
         ]
     },
     "videographer": {
-        "ANALYSIS": [
+        "BRIEFING": [
             {"title": "Equipment Inventory", "description": "Check if gimble, devices and lenses are charged clean and ready."}
         ],
-        "STRATEGY": [
+        "PRE-PRODUCTION": [
             {"title": "Site Survey", "description": "Check shooting location for power outlets and lighting conditions."},
             {"title": "Gear Requirement Check", "description": "Confirm if movement stabilizers (Flow 2 Pro) or tripods are needed."}
         ],
-        "EXECUTION": [
+        "PRODUCTION": [
             {"title": "Logistics Planning", "description": "Estimate travel time and secure any permits needed for drone/camera use."},
             {"title": "Primary Filming", "description": "Capture the primary footage according to the director's vision."}
         ],
-        "ITERATION": [
+        "POST-PRODUCTION": [
             {"title": "B-Roll Pickups", "description": "Identify and capture any missing transition shots or b-roll."}
         ],
-        "EVALUATION": [
+        "REVIEW & REVISION": [
+            {"title": "Additional Pickups", "description": "Capture any additional shots requested during the review stage."}
+        ],
+        "FINAL DELIVERY": [
             {"title": "DIT & Backup", "description": "Ensure all footage is safely offloaded and backed up in 3-2-1 system."}
         ]
     },
     "scriptwriter": {
-        "ANALYSIS": [
+        "BRIEFING": [
             {"title": "Narrative Structure Planning", "description": "Outline the story flow and key emotional beats of the script."}
         ],
-        "STRATEGY": [
+        "PRE-PRODUCTION": [
             {"title": "Dialogue/Voiceover Draft", "description": "Create the first draft of the spoken lines or narration."}
         ],
-        "EXECUTION": [
+        "PRODUCTION": [
             {"title": "Final Script Handover", "description": "Polishing and delivering the final approved script for production."}
         ],
-        "ITERATION": [
+        "POST-PRODUCTION": [
             {"title": "Script Tweaks", "description": "Adjust dialogue based on actor/director feedback during production."}
         ],
-        "EVALUATION": [
+        "REVIEW & REVISION": [
+            {"title": "Copy Polish", "description": "Finalize any text overlays or subtitles based on review."}
+        ],
+        "FINAL DELIVERY": [
             {"title": "Script Archive", "description": "Update the script to its 'As-Released' version for documentation."}
         ]
     }
