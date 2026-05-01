@@ -348,15 +348,20 @@ def repair_db_get(db: Session = Depends(deps.get_db)):
         db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS due_days_offset INTEGER DEFAULT 1"))
         db.commit()
         
-        # 2. TOTAL CLEANUP of steps and automations
+        # 2. TOTAL CLEANUP of steps, automations, and units
         # Delete all automations first (to avoid FK errors)
         db.execute(text("DELETE FROM step_automations"))
         # Delete all existing steps
         db.execute(text("DELETE FROM project_steps"))
+        # Delete all existing units (departments)
+        db.execute(text("DELETE FROM organization_units"))
+        db.commit() # Commit the purge
         
         # 3. FRESH SEED all organizations
-        from db.models import Organization, ProjectStep, Project
+        from db.models import Organization, ProjectStep, Project, OrganizationUnit
         orgs = db.query(Organization).all()
+        
+        units_to_add = ["PRODUCTION", "CREATIVE_AND_STRATEGY", "GROWTH_AND_ENGAGEMENT", "TEAM_DEVELOPMENT"]
         
         steps_to_add = [
             ("Briefing", "#A855F7", 1),
@@ -368,6 +373,10 @@ def repair_db_get(db: Session = Depends(deps.get_db)):
         ]
 
         for org in orgs:
+            # Create new units
+            for u_name in units_to_add:
+                db.add(OrganizationUnit(organization_id=org.id, name=u_name))
+
             # Create new steps
             new_steps = []
             for name, color, order in steps_to_add:
