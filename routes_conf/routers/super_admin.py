@@ -342,7 +342,14 @@ def repair_db_get(db: Session = Depends(deps.get_db)):
         db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS priority VARCHAR"))
         db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS due_days_offset INTEGER DEFAULT 1"))
         db.commit()
-        return {"status": "success", "message": "Database schema patched successfully."}
+        
+        # FORCE SEED all organizations to new defaults
+        from db.models import Organization
+        orgs = db.query(Organization).all()
+        for org in orgs:
+            seed_organization_defaults(db, org.id)
+            
+        return {"status": "success", "message": "Database schema patched and ALL organizations updated to new professional steps."}
     except Exception as e:
         db.rollback()
         return {"status": "error", "message": str(e)}
