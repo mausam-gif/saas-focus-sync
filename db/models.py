@@ -163,7 +163,7 @@ class Project(Base):
     delivery_date = Column(DateTime, nullable=True) # Renamed from deadline potentially or added
     deadline = Column(DateTime, nullable=False)
     
-    status = Column(String, default="ANALYSIS", nullable=False)
+    status = Column(String, default="Briefing", nullable=False)
     service_category = Column(String, nullable=True) # e.g. Cinematic Car Shoot
     
     # Foundational / During

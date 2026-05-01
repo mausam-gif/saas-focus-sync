@@ -379,8 +379,6 @@ export default function ProjectsPage() {
                                                     {orgSettings.steps.map((s: any) => (
                                                         <option key={s.id} value={s.name}>{s.name}</option>
                                                     ))}
-                                                    {/* Fallback for legacy data */}
-                                                    {!orgSettings.steps.find((s:any) => s.name === p.status) && <option value={p.status}>{p.status}</option>}
                                                 </select>
                                             </div>
                                         </div>

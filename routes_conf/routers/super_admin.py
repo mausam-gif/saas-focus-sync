@@ -389,7 +389,10 @@ def repair_db_get(db: Session = Depends(deps.get_db)):
             # Point all projects in this org to the FIRST step (Briefing)
             if new_steps:
                 db.query(Project).filter(Project.organization_id == org.id).update(
-                    {Project.project_step_id: new_steps[0].id},
+                    {
+                        Project.project_step_id: new_steps[0].id,
+                        Project.status: "Briefing" # NEW: Also update the legacy status string
+                    },
                     synchronize_session=False
                 )
             
