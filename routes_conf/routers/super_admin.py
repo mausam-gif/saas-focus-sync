@@ -77,7 +77,12 @@ def seed_organization_defaults(db: Session, org_id: int):
     
     # 2. Default Steps (Fresh Sync)
     # Delete old steps for this org to ensure clean new defaults
-    db.query(ProjectStep).filter(ProjectStep.organization_id == org_id).delete()
+    # First delete automations linked to these steps to avoid foreign key errors
+    old_step_ids = [s.id for s in db.query(ProjectStep).filter(ProjectStep.organization_id == org_id).all()]
+    if old_step_ids:
+        db.query(StepAutomation).filter(StepAutomation.step_id.in_(old_step_ids)).delete(synchronize_session=False)
+    
+    db.query(ProjectStep).filter(ProjectStep.organization_id == org_id).delete(synchronize_session=False)
     
     steps = [
         ("Briefing", "#A855F7", 1),         # Purple
