@@ -332,15 +332,14 @@ def get_all_designations(
 def repair_db_get(db: Session = Depends(deps.get_db)):
     """GET version for easy browser access."""
     from sqlalchemy import text
-    from db.session import Base, engine
     try:
-        Base.metadata.create_all(bind=engine)
+        # Use existing 'db' session which we know works for regular queries
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unit_id INTEGER"))
         db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_step_id INTEGER"))
         db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS priority VARCHAR"))
         db.execute(text("ALTER TABLE step_automations ADD COLUMN IF NOT EXISTS due_days_offset INTEGER DEFAULT 1"))
         db.commit()
-        return {"status": "success", "message": "All tables and columns verified/created (Step Automations patched)."}
+        return {"status": "success", "message": "Database schema patched successfully."}
     except Exception as e:
         db.rollback()
         return {"status": "error", "message": str(e)}
